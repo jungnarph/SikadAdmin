@@ -238,62 +238,88 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script>
-        // Sample location data
+        // Polygon coordinates
+        const polygonCoords = [
+            [14.417587, 120.884827],
+            [14.416179, 120.884086],
+            [14.413934, 120.885073],
+            [14.413498, 120.884151],
+            [14.411446, 120.884457],
+            [14.410672, 120.885165],
+            [14.407663, 120.884473],
+            [14.407258, 120.88399],
+            [14.40545, 120.884837],
+            [14.404889, 120.884237],
+            [14.402821, 120.884435],
+            [14.397313, 120.887734],
+            [14.399662, 120.894214],
+            [14.400389, 120.895867],
+            [14.401553, 120.895824],
+            [14.402665, 120.897787],
+            [14.404702, 120.897401],
+            [14.407591, 120.894998],
+            [14.407113, 120.894075],
+            [14.409378, 120.89077],
+            [14.412745, 120.88841],
+            [14.416963, 120.8862]
+        ];
+
+        // Sample location data - updated to Philippines region
         const locations = [
             {
                 id: 1,
-                name: "Headquarters",
+                name: "Main Campus",
                 type: "Office",
-                lat: 40.7128,
-                lng: -74.0060,
-                address: "123 Main St, New York, NY",
+                lat: 14.4095,
+                lng: 120.8896,
+                address: "Malolos, Bulacan",
                 employees: 250,
                 status: "Active",
-                description: "Main office building with R&D facilities"
+                description: "Primary office and administrative center"
             },
             {
                 id: 2,
-                name: "West Coast Hub",
-                type: "Office",
-                lat: 37.7749,
-                lng: -122.4194,
-                address: "456 Tech Blvd, San Francisco, CA",
-                employees: 180,
+                name: "Research Facility",
+                type: "Laboratory",
+                lat: 14.4067,
+                lng: 120.8920,
+                address: "Malolos Industrial Park",
+                employees: 85,
                 status: "Active",
-                description: "Innovation center and tech development"
+                description: "Advanced research and development center"
             },
             {
                 id: 3,
-                name: "Distribution Center",
+                name: "Distribution Hub",
                 type: "Warehouse",
-                lat: 41.8781,
-                lng: -87.6298,
-                address: "789 Industrial Way, Chicago, IL",
+                lat: 14.4005,
+                lng: 120.8950,
+                address: "Logistics Zone, Malolos",
                 employees: 95,
                 status: "Active",
-                description: "Primary logistics and distribution facility"
+                description: "Primary distribution and logistics facility"
             },
             {
                 id: 4,
-                name: "Manufacturing Plant",
+                name: "Production Plant",
                 type: "Factory",
-                lat: 33.4484,
-                lng: -112.0740,
-                address: "321 Factory Rd, Phoenix, AZ",
+                lat: 14.4025,
+                lng: 120.8880,
+                address: "Industrial Area, Malolos",
                 employees: 320,
                 status: "Warning",
                 description: "Main production facility - maintenance scheduled"
             },
             {
                 id: 5,
-                name: "Research Lab",
-                type: "Laboratory",
-                lat: 42.3601,
-                lng: -71.0589,
-                address: "567 Science Park, Boston, MA",
-                employees: 85,
+                name: "Training Center",
+                type: "Office",
+                lat: 14.4140,
+                lng: 120.8870,
+                address: "Education District, Malolos",
+                employees: 60,
                 status: "Active",
-                description: "Advanced research and development center"
+                description: "Employee training and development center"
             }
         ];
 
@@ -305,14 +331,44 @@
             Laboratory: '🔬'
         };
 
-        // Initialize map
-        const map = L.map('map').setView([39.8283, -98.5795], 4);
+        // Initialize map centered on the polygon area
+        const map = L.map('map').setView([14.4075, 120.8900], 14);
 
         // Add tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 19
         }).addTo(map);
+
+        // Add polygon overlay
+        const polygon = L.polygon(polygonCoords, {
+            color: '#667eea',
+            fillColor: '#667eea',
+            fillOpacity: 0.3,
+            weight: 3
+        }).addTo(map);
+
+        // Add polygon popup
+        polygon.bindPopup(`
+            <div class="popup-header">
+                <h3>📍 Designated Area</h3>
+                <div class="type">Operational Zone</div>
+            </div>
+            <div class="popup-body">
+                <div class="popup-info">
+                    <span class="popup-icon">📏</span>
+                    <span>Area Coverage: Malolos Region</span>
+                </div>
+                <div class="popup-info">
+                    <span class="popup-icon">🏢</span>
+                    <span>Contains 5 facilities</span>
+                </div>
+                <div class="popup-info">
+                    <span class="popup-icon">📊</span>
+                    <span class="status-badge status-active">Active Zone</span>
+                </div>
+            </div>
+        `, { className: 'custom-popup', maxWidth: 300 });
 
         // Store markers
         const markers = {};
