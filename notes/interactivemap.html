@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Dashboard Map</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            display: flex;
+            gap: 20px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .location-item {
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+
+        .location-item:hover {
+            background: #e9ecef;
+            border-left-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .location-item.active {
+            background: #e7e9fc;
+            border-left-color: #667eea;
+        }
+
+        .location-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .location-type {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .map-container {
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .custom-popup .leaflet-popup-content {
+            margin: 0;
+            width: 280px !important;
+        }
+
+        .popup-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+        }
+
+        .popup-header h3 {
+            margin: 0 0 5px 0;
+            font-size: 18px;
+        }
+
+        .popup-header .type {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .popup-body {
+            padding: 15px;
+        }
+
+        .popup-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .popup-info:last-child {
+            margin-bottom: 0;
+        }
+
+        .popup-icon {
+            width: 30px;
+            font-size: 18px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>📍 Location Dashboard</h1>
+            <p>Click on markers for detailed information</p>
+        </div>
+
+        <div class="content">
+            <div class="sidebar">
+                <h2>Locations</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Total Sites</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">4</div>
+                        <div class="stat-label">Active</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">1</div>
+                        <div class="stat-label">Warning</div>
+                    </div>
+                </div>
+                <div id="locationList"></div>
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        // Sample location data
+        const locations = [
+            {
+                id: 1,
+                name: "Headquarters",
+                type: "Office",
+                lat: 40.7128,
+                lng: -74.0060,
+                address: "123 Main St, New York, NY",
+                employees: 250,
+                status: "Active",
+                description: "Main office building with R&D facilities"
+            },
+            {
+                id: 2,
+                name: "West Coast Hub",
+                type: "Office",
+                lat: 37.7749,
+                lng: -122.4194,
+                address: "456 Tech Blvd, San Francisco, CA",
+                employees: 180,
+                status: "Active",
+                description: "Innovation center and tech development"
+            },
+            {
+                id: 3,
+                name: "Distribution Center",
+                type: "Warehouse",
+                lat: 41.8781,
+                lng: -87.6298,
+                address: "789 Industrial Way, Chicago, IL",
+                employees: 95,
+                status: "Active",
+                description: "Primary logistics and distribution facility"
+            },
+            {
+                id: 4,
+                name: "Manufacturing Plant",
+                type: "Factory",
+                lat: 33.4484,
+                lng: -112.0740,
+                address: "321 Factory Rd, Phoenix, AZ",
+                employees: 320,
+                status: "Warning",
+                description: "Main production facility - maintenance scheduled"
+            },
+            {
+                id: 5,
+                name: "Research Lab",
+                type: "Laboratory",
+                lat: 42.3601,
+                lng: -71.0589,
+                address: "567 Science Park, Boston, MA",
+                employees: 85,
+                status: "Active",
+                description: "Advanced research and development center"
+            }
+        ];
+
+        // Custom icons
+        const icons = {
+            Office: '🏢',
+            Warehouse: '📦',
+            Factory: '🏭',
+            Laboratory: '🔬'
+        };
+
+        // Initialize map
+        const map = L.map('map').setView([39.8283, -98.5795], 4);
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Store markers
+        const markers = {};
+
+        // Add markers to map
+        locations.forEach(location => {
+            // Create custom icon
+            const customIcon = L.divIcon({
+                html: `<div style="font-size: 32px;">${icons[location.type]}</div>`,
+                className: 'custom-marker',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+
+            // Create popup content
+            const popupContent = `
+                <div class="popup-header">
+                    <h3>${location.name}</h3>
+                    <div class="type">${icons[location.type]} ${location.type}</div>
+                </div>
+                <div class="popup-body">
+                    <div class="popup-info">
+                        <span class="popup-icon">📍</span>
+                        <span>${location.address}</span>
+                    </div>
+                    <div class="popup-info">
+                        <span class="popup-icon">👥</span>
+                        <span>${location.employees} Employees</span>
+                    </div>
+                    <div class="popup-info">
+                        <span class="popup-icon">ℹ️</span>
+                        <span>${location.description}</span>
+                    </div>
+                    <div class="popup-info">
+                        <span class="popup-icon">📊</span>
+                        <span class="status-badge status-${location.status.toLowerCase()}">${location.status}</span>
+                    </div>
+                </div>
+            `;
+
+            // Create marker
+            const marker = L.marker([location.lat, location.lng], { icon: customIcon })
+                .addTo(map)
+                .bindPopup(popupContent, { 
+                    className: 'custom-popup',
+                    maxWidth: 300 
+                });
+
+            markers[location.id] = marker;
+        });
+
+        // Populate sidebar
+        const locationList = document.getElementById('locationList');
+        locations.forEach(location => {
+            const item = document.createElement('div');
+            item.className = 'location-item';
+            item.innerHTML = `
+                <div class="location-name">${icons[location.type]} ${location.name}</div>
+                <div class="location-type">${location.type} • ${location.employees} employees</div>
+            `;
+            
+            item.addEventListener('click', () => {
+                // Remove active class from all items
+                document.querySelectorAll('.location-item').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // Add active class to clicked item
+                item.classList.add('active');
+                
+                // Zoom to marker and open popup
+                map.setView([location.lat, location.lng], 10);
+                markers[location.id].openPopup();
+            });
+            
+            locationList.appendChild(item);
+        });
+    </script>
+</body>
+</html>
