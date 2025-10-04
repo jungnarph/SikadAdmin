@@ -9,7 +9,7 @@ from apps.geofencing.models import Zone
 from django.utils import timezone
 
 
-#@login_required
+@login_required
 def dashboard(request):
     """Main dashboard view"""
     
