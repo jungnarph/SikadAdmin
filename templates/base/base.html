@@ -220,6 +220,7 @@
             padding: 8px 12px;
             border-radius: 25px;
             transition: background 0.3s ease;
+            position: relative;
         }
 
         .user-profile:hover {
@@ -256,6 +257,95 @@
             font-size: 12px;
             color: #7f8c8d;
             line-height: 1.2;
+        }
+
+        /* Profile Dropdown */
+        .profile-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 280px;
+            display: none;
+            z-index: 1001;
+        }
+
+        .profile-dropdown.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-content {
+            padding: 8px 0;
+        }
+
+        .dropdown-header {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .user-avatar-small {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--secondary-green), var(--primary-green));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            color: #2c3e50;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .dropdown-item:hover {
+            background: #f5f7fa;
+            color: #2c3e50;
+            padding-left: 25px;
+        }
+
+        .dropdown-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        .dropdown-item.text-danger:hover {
+            background: #fee;
+            color: #dc3545;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background: #e9ecef;
+            margin: 8px 0;
         }
 
         /* Main Content Area */
@@ -442,7 +532,7 @@
         <div class="sidebar-menu">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'bike_monitor' %}active{% endif %}" href="{% url 'dashboard' %}">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
                         <i class="fas fa-chart-line"></i> Dashboard
                     </a>
                 </li>
@@ -473,7 +563,7 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="#">
-                        <i class="fas fa-wrench"></i> Support
+                        <i class="fas fa-wrench"></i> Maintenance
                     </a>
                 </li>
                 <li class="nav-item">
@@ -492,7 +582,7 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'admin:logout' %}">
+                    <a class="nav-link" href="{% url 'accounts:logout' %}">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </li>
@@ -511,11 +601,53 @@
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge">5</span>
             </div>
-            <div class="user-profile">
-                <div class="user-avatar">SA</div>
+            
+            <!-- User Profile with Dropdown -->
+            <div class="user-profile" onclick="toggleProfileMenu(event)">
+                <div class="user-avatar">
+                    {% if user.is_authenticated %}
+                        {{ user.first_name.0|default:user.username.0|upper }}
+                    {% else %}
+                        G
+                    {% endif %}
+                </div>
                 <div class="user-info-text">
-                    <span class="user-name">Super Admin</span>
-                    <span class="user-email">admin@bikerental.com</span>
+                    {% if user.is_authenticated %}
+                        <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                        <span class="user-email">{{ user.email|default:"No email" }}</span>
+                    {% else %}
+                        <span class="user-name">Guest</span>
+                        <span class="user-email">Not logged in</span>
+                    {% endif %}
+                </div>
+                
+                <!-- Profile Dropdown -->
+                <div class="profile-dropdown" id="profileDropdown">
+                    <div class="dropdown-content">
+                        <div class="dropdown-header">
+                            <div class="user-avatar-small">
+                                {{ user.first_name.0|default:user.username.0|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ user.get_full_name|default:user.username }}</div>
+                                <small class="text-muted">{{ user.get_role_display }}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'accounts:profile' %}" class="dropdown-item">
+                            <i class="fas fa-user"></i> My Profile
+                        </a>
+                        <a href="{% url 'accounts:change_password' %}" class="dropdown-item">
+                            <i class="fas fa-key"></i> Change Password
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="{% url 'admin:index' %}" class="dropdown-item">
+                            <i class="fas fa-shield-alt"></i> Django Admin
+                        </a>
+                        <a href="{% url 'accounts:logout' %}" class="dropdown-item text-danger">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -568,6 +700,27 @@
                 }
             });
         }
+
+        // Profile dropdown toggle
+        function toggleProfileMenu(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('profileDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const profileDropdown = document.getElementById('profileDropdown');
+            const userProfile = document.querySelector('.user-profile');
+            
+            if (profileDropdown && userProfile) {
+                const isClickInside = userProfile.contains(event.target) || profileDropdown.contains(event.target);
+                
+                if (!isClickInside && profileDropdown.classList.contains('show')) {
+                    profileDropdown.classList.remove('show');
+                }
+            }
+        });
 
         // Auto-dismiss alerts after 5 seconds
         setTimeout(function() {
