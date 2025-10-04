@@ -1,0 +1,270 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Live Bike Map - Sikad Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #liveMap {
+        height: calc(100vh - 200px);
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    }
+    
+    .map-controls {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .bike-marker {
+        background: transparent;
+        border: none;
+    }
+    
+    .legend {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="fas fa-map-marked-alt"></i> Live Bike Map</h1>
+    <p class="text-muted">Real-time location of all bikes in the system</p>
+</div>
+
+<!-- Statistics Bar -->
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">Total on Map</small>
+                <h4 class="mb-0" id="totalBikes">0</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">Available</small>
+                <h4 class="mb-0 text-success" id="availableBikes">0</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">In Use</small>
+                <h4 class="mb-0 text-primary" id="inUseBikes">0</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">Last Updated</small>
+                <h6 class="mb-0 text-muted" id="lastUpdate">-</h6>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Map Container -->
+<div class="card">
+    <div class="card-body p-0">
+        <div style="position: relative;">
+            <div id="liveMap"></div>
+            
+            <!-- Map Controls -->
+            <div class="map-controls">
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="showAvailable" checked>
+                    <label class="form-check-label" for="showAvailable">
+                        <span class="text-success">●</span> Available
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="showInUse" checked>
+                    <label class="form-check-label" for="showInUse">
+                        <span class="text-primary">●</span> In Use
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-2">
+                    <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
+                    <label class="form-check-label" for="showMaintenance">
+                        <span class="text-warning">●</span> Maintenance
+                    </label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showOffline" checked>
+                    <label class="form-check-label" for="showOffline">
+                        <span class="text-danger">●</span> Offline
+                    </label>
+                </div>
+                <hr>
+                <button class="btn btn-sm btn-primary w-100" onclick="refreshMap()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Initialize map centered on Philippines (Bulacan)
+    const map = L.map('liveMap').setView([14.8433, 120.8111], 13);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Store markers
+    let bikeMarkers = {};
+    
+    // Bike data from Django (you'll need to pass this from view)
+    const bikes = {{ bikes_json|safe }};
+    
+    // Color mapping for bike status
+    const statusColors = {
+        'AVAILABLE': '#28a745',
+        'IN_USE': '#007bff',
+        'MAINTENANCE': '#ffc107',
+        'OFFLINE': '#dc3545'
+    };
+    
+    // Function to create bike marker
+    function createBikeMarker(bike) {
+        const color = statusColors[bike.status] || '#6c757d';
+        
+        const icon = L.divIcon({
+            html: `<i class="fas fa-bicycle fa-2x" style="color: ${color};"></i>`,
+            className: 'bike-marker',
+            iconSize: [30, 30]
+        });
+        
+        const marker = L.marker([bike.latitude, bike.longitude], {icon: icon})
+            .bindPopup(`
+                <div style="min-width: 200px;">
+                    <h6><strong>${bike.bike_id}</strong></h6>
+                    <p class="mb-1"><small><strong>Model:</strong> ${bike.bike_model}</small></p>
+                    <p class="mb-1"><small><strong>Type:</strong> ${bike.bike_type}</small></p>
+                    <p class="mb-1"><small><strong>Status:</strong> <span class="badge" style="background: ${color};">${bike.status}</span></small></p>
+                    <a href="/bikes/${bike.bike_id}/" class="btn btn-sm btn-primary mt-2 w-100">View Details</a>
+                </div>
+            `);
+        
+        return marker;
+    }
+    
+    // Function to load bikes on map
+    function loadBikes() {
+        // Clear existing markers
+        Object.values(bikeMarkers).forEach(marker => marker.remove());
+        bikeMarkers = {};
+        
+        let stats = {
+            total: 0,
+            available: 0,
+            inUse: 0,
+            maintenance: 0,
+            offline: 0
+        };
+        
+        bikes.forEach(bike => {
+            if (bike.latitude && bike.longitude) {
+                const marker = createBikeMarker(bike);
+                bikeMarkers[bike.bike_id] = {
+                    marker: marker,
+                    status: bike.status
+                };
+                marker.addTo(map);
+                
+                stats.total++;
+                if (bike.status === 'AVAILABLE') stats.available++;
+                else if (bike.status === 'IN_USE') stats.inUse++;
+                else if (bike.status === 'MAINTENANCE') stats.maintenance++;
+                else if (bike.status === 'OFFLINE') stats.offline++;
+            }
+        });
+        
+        // Update statistics
+        document.getElementById('totalBikes').textContent = stats.total;
+        document.getElementById('availableBikes').textContent = stats.available;
+        document.getElementById('inUseBikes').textContent = stats.inUse;
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        
+        // Fit map to show all markers
+        if (stats.total > 0) {
+            const group = L.featureGroup(Object.values(bikeMarkers).map(b => b.marker));
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+    
+    // Filter bikes based on checkboxes
+    function filterBikes() {
+        const showAvailable = document.getElementById('showAvailable').checked;
+        const showInUse = document.getElementById('showInUse').checked;
+        const showMaintenance = document.getElementById('showMaintenance').checked;
+        const showOffline = document.getElementById('showOffline').checked;
+        
+        Object.entries(bikeMarkers).forEach(([bikeId, data]) => {
+            const show = (
+                (data.status === 'AVAILABLE' && showAvailable) ||
+                (data.status === 'IN_USE' && showInUse) ||
+                (data.status === 'MAINTENANCE' && showMaintenance) ||
+                (data.status === 'OFFLINE' && showOffline)
+            );
+            
+            if (show) {
+                data.marker.addTo(map);
+            } else {
+                data.marker.remove();
+            }
+        });
+    }
+    
+    // Refresh map function
+    function refreshMap() {
+        location.reload();
+    }
+    
+    // Add event listeners to checkboxes
+    document.getElementById('showAvailable').addEventListener('change', filterBikes);
+    document.getElementById('showInUse').addEventListener('change', filterBikes);
+    document.getElementById('showMaintenance').addEventListener('change', filterBikes);
+    document.getElementById('showOffline').addEventListener('change', filterBikes);
+    
+    // Initial load
+    loadBikes();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(refreshMap, 30000);
+</script>
+{% endblock %}
