@@ -1,0 +1,233 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Bike Details - {{ bike.firebase_id }} - Sikad Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #bikeMap {
+        height: 400px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'bikes:bike_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+            <h1><i class="fas fa-bicycle"></i> Bike Details: {{ bike.firebase_id }}</h1>
+        </div>
+        <div>
+            <a href="{% url 'bikes:sync_bike' bike.firebase_id %}" class="btn btn-success">
+                <i class="fas fa-sync"></i> Sync Now
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Bike Information -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Bike Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted">Bike ID:</td>
+                        <td><strong>{{ bike.firebase_id }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Model:</td>
+                        <td>{{ bike.bike_model }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Type:</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ bike.bike_type }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Status:</td>
+                        <td>
+                            {% if bike.status == 'AVAILABLE' %}
+                                <span class="badge badge-available">Available</span>
+                            {% elif bike.status == 'IN_USE' %}
+                                <span class="badge badge-rented">In Use</span>
+                            {% elif bike.status == 'MAINTENANCE' %}
+                                <span class="badge badge-maintenance">Maintenance</span>
+                            {% else %}
+                                <span class="badge badge-offline">Offline</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Current Zone:</td>
+                        <td>
+                            {% if bike.current_zone_id %}
+                                <span class="badge bg-info">{{ bike.current_zone_id }}</span>
+                            {% else %}
+                                <span class="text-muted">Not assigned</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="updateStatus('AVAILABLE')">
+                        <i class="fas fa-check-circle"></i> Mark as Available
+                    </button>
+                    <button class="btn btn-warning" onclick="updateStatus('MAINTENANCE')">
+                        <i class="fas fa-wrench"></i> Send to Maintenance
+                    </button>
+                    <button class="btn btn-danger" onclick="updateStatus('OFFLINE')">
+                        <i class="fas fa-power-off"></i> Mark as Offline
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Information -->
+        {% if pg_bike %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Sync Information</h5>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">Last synced:</small>
+                <p class="mb-2"><strong>{{ pg_bike.synced_at|timesince }} ago</strong></p>
+                <small class="text-muted">PostgreSQL ID:</small>
+                <p class="mb-0"><code>{{ pg_bike.id }}</code></p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Map and Location History -->
+    <div class="col-md-8">
+        <!-- Current Location Map -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Current Location</h5>
+            </div>
+            <div class="card-body">
+                {% if bike.current_latitude and bike.current_longitude %}
+                    <div id="bikeMap"></div>
+                    <div class="mt-3">
+                        <p class="mb-1"><strong>Coordinates:</strong></p>
+                        <p class="text-muted mb-0">
+                            Lat: {{ bike.current_latitude|floatformat:6 }}, 
+                            Lng: {{ bike.current_longitude|floatformat:6 }}
+                        </p>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No location data available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Location History -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Location History</h5>
+                <span class="badge bg-primary">{{ location_history|length }} records</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Speed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for location in location_history %}
+                            <tr>
+                                <td>
+                                    <small>{{ location.recorded_at|date:"M d, Y H:i" }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ location.latitude|floatformat:6 }}</small>
+                                </td>
+                                <td>
+                                    <small>{{ location.longitude|floatformat:6 }}</small>
+                                </td>
+                                <td>
+                                    {% if location.speed %}
+                                        <span class="badge bg-info">{{ location.speed|floatformat:1 }} km/h</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No location history available</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    {% if bike.current_latitude and bike.current_longitude %}
+    // Initialize map
+    const map = L.map('bikeMap').setView([{{ bike.current_latitude }}, {{ bike.current_longitude }}], 15);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Add marker for bike location
+    const bikeIcon = L.divIcon({
+        html: '<i class="fas fa-bicycle fa-2x" style="color: #28a745;"></i>',
+        className: 'bike-marker',
+        iconSize: [30, 30]
+    });
+    
+    L.marker([{{ bike.current_latitude }}, {{ bike.current_longitude }}], {icon: bikeIcon})
+        .addTo(map)
+        .bindPopup('<strong>{{ bike.firebase_id }}</strong><br>{{ bike.bike_model }}')
+        .openPopup();
+    {% endif %}
+    
+    // Update status function
+    function updateStatus(newStatus) {
+        if (confirm(`Are you sure you want to change bike status to ${newStatus}?`)) {
+            // TODO: Implement AJAX call to update status
+            alert('Status update functionality will be implemented');
+        }
+    }
+</script>
+{% endblock %}
