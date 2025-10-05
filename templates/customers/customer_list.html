@@ -1,0 +1,300 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Customer Management - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-users"></i> Customer Management</h1>
+        <p class="text-muted">View and manage all registered customers</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_statistics' %}" class="btn btn-info me-2">
+            <i class="fas fa-chart-bar"></i> Statistics
+        </a>
+        <a href="{% url 'customers:customer_export' %}" class="btn btn-success me-2">
+            <i class="fas fa-file-export"></i> Export CSV
+        </a>
+        <a href="{% url 'customers:sync_all_customers' %}" class="btn btn-primary">
+            <i class="fas fa-sync"></i> Sync from Firebase
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Customers</h6>
+                        <h2 class="mb-0">{{ total_count }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #28a745;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Active</h6>
+                        <h2 class="mb-0 text-success">{{ active_count }}</h2>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Suspended</h6>
+                        <h2 class="mb-0 text-danger">{{ suspended_count }}</h2>
+                    </div>
+                    <div class="text-danger" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Pending Verification</h6>
+                        <h2 class="mb-0 text-warning">{{ pending_verification }}</h2>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="SUSPENDED">Suspended</option>
+                    <option value="BANNED">Banned</option>
+                    <option value="PENDING">Pending</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Verification</label>
+                <select name="verification" class="form-select">
+                    <option value="">All Verification</option>
+                    <option value="UNVERIFIED">Unverified</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="VERIFIED">Verified</option>
+                    <option value="REJECTED">Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Search by name, email, or phone...">
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Customers</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Customer</th>
+                        <th>Contact</th>
+                        <th>Status</th>
+                        <th>Verification</th>
+                        <th>Total Rides</th>
+                        <th>Total Spent</th>
+                        <th>Registered</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-2" style="width: 40px; height: 40px; font-size: 16px;">
+                                    {{ customer.full_name.0|default:'U'|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ customer.full_name|default:"Unnamed User" }}</strong><br>
+                                    <small class="text-muted">{{ customer.firebase_id|truncatechars:12 }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                {% if customer.email %}
+                                <i class="fas fa-envelope text-muted"></i> {{ customer.email }}<br>
+                                {% endif %}
+                                {% if customer.phone_number %}
+                                <i class="fas fa-phone text-muted"></i> {{ customer.phone_number }}
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if customer.status == 'ACTIVE' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Active
+                                </span>
+                            {% elif customer.status == 'SUSPENDED' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-ban"></i> Suspended
+                                </span>
+                            {% elif customer.status == 'BANNED' %}
+                                <span class="badge bg-dark">
+                                    <i class="fas fa-user-slash"></i> Banned
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if customer.verification_status == 'VERIFIED' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-shield-alt"></i> Verified
+                                </span>
+                            {% elif customer.verification_status == 'PENDING' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif customer.verification_status == 'REJECTED' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times"></i> Rejected
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question"></i> Unverified
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ customer.total_rides }}</strong> rides
+                        </td>
+                        <td>
+                            <strong>₱{{ customer.total_spent|floatformat:2 }}</strong>
+                        </td>
+                        <td>
+                            <small>{{ customer.registration_date|date:"M d, Y"|default:"N/A" }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'customers:customer_detail' customer.firebase_id %}" 
+                                   class="btn btn-outline-primary" 
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'customers:customer_edit' customer.firebase_id %}" 
+                                   class="btn btn-outline-warning" 
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if customer.status == 'ACTIVE' %}
+                                <a href="{% url 'customers:customer_suspend' customer.firebase_id %}" 
+                                   class="btn btn-outline-danger" 
+                                   title="Suspend">
+                                    <i class="fas fa-ban"></i>
+                                </a>
+                                {% else %}
+                                <a href="{% url 'customers:customer_reactivate' customer.firebase_id %}" 
+                                   class="btn btn-outline-success" 
+                                   title="Reactivate">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No customers found. Click "Sync from Firebase" to load customers.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if customers.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if customers.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ customers.number }} of {{ customers.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if customers.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ customers.paginator.num_pages }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 60 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 60000);
+</script>
+{% endblock %}

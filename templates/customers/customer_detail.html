@@ -1,0 +1,321 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ customer.full_name|default:"Customer" }} - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Customers
+            </a>
+            <h1><i class="fas fa-user"></i> {{ customer.full_name|default:"Customer Profile" }}</h1>
+            <p class="text-muted">Customer ID: {{ customer.firebase_id }}</p>
+        </div>
+        <div>
+            <a href="{% url 'customers:customer_edit' customer.firebase_id %}" class="btn btn-warning me-2">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            <a href="{% url 'customers:sync_customer' customer.firebase_id %}" class="btn btn-success me-2">
+                <i class="fas fa-sync"></i> Sync
+            </a>
+            {% if customer.status == 'ACTIVE' %}
+            <a href="{% url 'customers:customer_suspend' customer.firebase_id %}" class="btn btn-danger">
+                <i class="fas fa-ban"></i> Suspend
+            </a>
+            {% else %}
+            <a href="{% url 'customers:customer_reactivate' customer.firebase_id %}" class="btn btn-success">
+                <i class="fas fa-undo"></i> Reactivate
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Customer Information -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 40px;">
+                    {{ customer.full_name.0|default:'U'|upper }}
+                </div>
+                <h4>{{ customer.full_name|default:"Unnamed User" }}</h4>
+                <p class="text-muted">{{ customer.email|default:"No email" }}</p>
+                
+                <div class="mb-3">
+                    {% if customer.status == 'ACTIVE' %}
+                        <span class="badge bg-success px-3 py-2">
+                            <i class="fas fa-check-circle"></i> Active
+                        </span>
+                    {% elif customer.status == 'SUSPENDED' %}
+                        <span class="badge bg-danger px-3 py-2">
+                            <i class="fas fa-ban"></i> Suspended
+                        </span>
+                    {% else %}
+                        <span class="badge bg-warning px-3 py-2">
+                            <i class="fas fa-clock"></i> {{ customer.status }}
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <div class="text-start">
+                    <p class="mb-2">
+                        <i class="fas fa-envelope text-muted"></i>
+                        <span class="ms-2">{{ customer.email|default:"Not provided" }}</span>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-phone text-muted"></i>
+                        <span class="ms-2">{{ customer.phone_number|default:"Not provided" }}</span>
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-calendar text-muted"></i>
+                        <span class="ms-2">Joined {{ customer.registration_date|date:"M d, Y"|default:"N/A" }}</span>
+                    </p>
+                    {% if customer.last_login %}
+                    <p class="mb-0">
+                        <i class="fas fa-clock text-muted"></i>
+                        <span class="ms-2">Last login: {{ customer.last_login|timesince }} ago</span>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Verification Status -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Verification Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Email Verification:</strong></label>
+                    <div>
+                        {% if customer.email_verified %}
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Verified</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-times"></i> Unverified</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>Phone Verification:</strong></label>
+                    <div>
+                        {% if customer.phone_verified %}
+                            <span class="badge bg-success"><i class="fas fa-check"></i> Verified</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-times"></i> Unverified</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label"><strong>ID Verification:</strong></label>
+                    <div>
+                        {% if customer.verification_status == 'VERIFIED' %}
+                            <span class="badge bg-success"><i class="fas fa-shield-alt"></i> Verified</span>
+                        {% elif customer.verification_status == 'PENDING' %}
+                            <span class="badge bg-warning"><i class="fas fa-clock"></i> Pending Review</span>
+                            <div class="mt-2">
+                                <form method="post" action="{% url 'customers:customer_verify_document' customer.firebase_id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" name="action" value="verify" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                </form>
+                            </div>
+                        {% elif customer.verification_status == 'REJECTED' %}
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Rejected</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-question"></i> Not Submitted</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if customer.id_document_url %}
+                <div>
+                    <a href="{{ customer.id_document_url }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-file-image"></i> View ID Document
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Admin Notes -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Admin Notes</h5>
+            </div>
+            <div class="card-body">
+                {% if customer.admin_notes %}
+                <div class="alert alert-info" style="white-space: pre-wrap; font-size: 12px;">{{ customer.admin_notes }}</div>
+                {% else %}
+                <p class="text-muted">No notes yet</p>
+                {% endif %}
+                
+                <form method="post" action="{% url 'customers:customer_add_note' customer.firebase_id %}">
+                    {% csrf_token %}
+                    <textarea name="note" class="form-control form-control-sm mb-2" rows="3" placeholder="Add a note..."></textarea>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">
+                        <i class="fas fa-plus"></i> Add Note
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics and Activity -->
+    <div class="col-md-8">
+        <!-- Statistics Cards -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Rides</h6>
+                        <h3 class="mb-0 text-primary">{{ statistics.total_rides|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Spent</h6>
+                        <h3 class="mb-0 text-success">₱{{ statistics.total_spent|floatformat:2|default:"0.00" }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Distance</h6>
+                        <h3 class="mb-0 text-info">{{ statistics.total_distance|floatformat:1|default:0 }} km</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Avg Duration</h6>
+                        <h3 class="mb-0 text-warning">{{ statistics.average_ride_duration|floatformat:0|default:0 }} min</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Rides -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Rides</h5>
+                <a href="{% url 'customers:customer_rides' customer.firebase_id %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Bike</th>
+                                <th>Duration</th>
+                                <th>Distance</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ride in ride_history %}
+                            <tr>
+                                <td><small>{{ ride.start_time|date:"M d, H:i" }}</small></td>
+                                <td><code>{{ ride.bike_id }}</code></td>
+                                <td>{{ ride.duration_minutes }} min</td>
+                                <td>{{ ride.distance_km|floatformat:2 }} km</td>
+                                <td><strong>₱{{ ride.amount_charged|floatformat:2 }}</strong></td>
+                                <td>
+                                    {% if ride.rental_status == 'COMPLETED' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif ride.rental_status == 'ACTIVE' %}
+                                        <span class="badge bg-primary">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ ride.rental_status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <i class="fas fa-bicycle fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">No rides yet</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Payment Methods</h5>
+            </div>
+            <div class="card-body">
+                {% if payment_methods %}
+                    {% for method in payment_methods %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                        <div>
+                            <strong>{{ method.get_payment_type_display }}</strong><br>
+                            <small class="text-muted">{{ method.masked_number }}</small>
+                            {% if method.is_default %}
+                                <span class="badge bg-primary ms-2">Default</span>
+                            {% endif %}
+                        </div>
+                        <div>
+                            {% if method.is_verified %}
+                                <span class="badge bg-success">Verified</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Unverified</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No payment methods added</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if activity_logs %}
+                    {% for log in activity_logs %}
+                    <div class="activity-item">
+                        <small class="text-muted">{{ log.timestamp|timesince }} ago</small>
+                        <p class="mb-1">
+                            <strong>{{ log.get_activity_type_display }}</strong>
+                            {% if log.description %}
+                            <br><small class="text-muted">{{ log.description }}</small>
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No activity recorded</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

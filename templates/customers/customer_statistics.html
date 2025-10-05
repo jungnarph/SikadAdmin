@@ -1,0 +1,270 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Customer Statistics - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-chart-bar"></i> Customer Statistics</h1>
+        <p class="text-muted">Analytics and insights about your customers</p>
+    </div>
+    <div>
+        <a href="{% url 'customers:customer_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-users"></i> View All Customers
+        </a>
+    </div>
+</div>
+
+<!-- Overview Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Customers</h6>
+                        <h2 class="mb-0">{{ total_customers }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #28a745;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Active Customers</h6>
+                        <h2 class="mb-0 text-success">{{ active_customers }}</h2>
+                        <small class="text-muted">
+                            {{ active_customers|floatformat:0 }}%
+                        </small>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-user-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Verified Customers</h6>
+                        <h2 class="mb-0 text-warning">{{ verified_customers }}</h2>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Suspended</h6>
+                        <h2 class="mb-0 text-danger">{{ suspended_customers }}</h2>
+                    </div>
+                    <div class="text-danger" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Registrations -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Registrations</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Customer</th>
+                                <th>Email</th>
+                                <th>Registered</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in recent_customers %}
+                            <tr onclick="window.location='{% url 'customers:customer_detail' customer.firebase_id %}'" style="cursor: pointer;">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 35px; height: 35px; font-size: 14px;">
+                                            {{ customer.full_name.0|default:'U'|upper }}
+                                        </div>
+                                        <strong>{{ customer.full_name|default:"Unnamed" }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ customer.email|truncatechars:30 }}</td>
+                                <td><small>{{ customer.registration_date|timesince }} ago</small></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No recent registrations</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Registration Trend -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Registration Trend (Last 6 Months)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="registrationChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Customers by Rides -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Customers by Rides</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Customer</th>
+                                <th>Total Rides</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in top_by_rides %}
+                            <tr onclick="window.location='{% url 'customers:customer_detail' customer.firebase_id %}'" style="cursor: pointer;">
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ customer.full_name|default:"Unnamed" }}</strong>
+                                    <br><small class="text-muted">{{ customer.email|truncatechars:25 }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ customer.total_rides }} rides</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No data available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Customers by Spending -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Top 10 Customers by Spending</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Customer</th>
+                                <th>Total Spent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in top_by_spending %}
+                            <tr onclick="window.location='{% url 'customers:customer_detail' customer.firebase_id %}'" style="cursor: pointer;">
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ customer.full_name|default:"Unnamed" }}</strong>
+                                    <br><small class="text-muted">{{ customer.email|truncatechars:25 }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">₱{{ customer.total_spent|floatformat:2 }}</span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No data available</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Registration Trend Chart
+    const ctx = document.getElementById('registrationChart').getContext('2d');
+    const registrationData = [
+        {% for item in monthly_registrations %}
+        {
+            month: '{{ item.month|date:"M Y" }}',
+            count: {{ item.count }}
+        },
+        {% endfor %}
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: registrationData.map(d => d.month),
+            datasets: [{
+                label: 'New Registrations',
+                data: registrationData.map(d => d.count),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -20,6 +20,7 @@ urlpatterns = [
     path('bikes/', include('apps.bikes.urls')),
     path('geofencing/', include('apps.geofencing.urls')),
     path('accounts/', include('apps.accounts.urls')),
+    path('customers/', include('apps.customers.urls')),
     
     # Root redirect to dashboard
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),

@@ -1,0 +1,208 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ customer.full_name }} - Ride History - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'customers:customer_detail' customer.firebase_id %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Customer
+            </a>
+            <h1><i class="fas fa-history"></i> Ride History</h1>
+            <p class="text-muted">{{ customer.full_name|default:"Customer" }} - {{ customer.firebase_id }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Total Rides</h6>
+                <h3 class="mb-0 text-primary">{{ total_rides }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Completed</h6>
+                <h3 class="mb-0 text-success">{{ completed_rides }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Total Distance</h6>
+                <h3 class="mb-0 text-info">{{ total_distance|floatformat:1 }} km</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="text-muted mb-2">Total Spent</h6>
+                <h3 class="mb-0 text-warning">₱{{ total_spent|floatformat:2 }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="CANCELLED">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Rides Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Rides</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Bike ID</th>
+                        <th>Duration</th>
+                        <th>Distance</th>
+                        <th>Start Location</th>
+                        <th>End Location</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ride in rides %}
+                    <tr>
+                        <td>
+                            <div>{{ ride.start_time|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ ride.start_time|time:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <code>{{ ride.bike_id }}</code>
+                        </td>
+                        <td>
+                            <strong>{{ ride.duration_minutes }}</strong> min
+                        </td>
+                        <td>
+                            {{ ride.distance_km|floatformat:2 }} km
+                        </td>
+                        <td>
+                            {% if ride.start_latitude and ride.start_longitude %}
+                                <small>{{ ride.start_latitude|floatformat:4 }}, {{ ride.start_longitude|floatformat:4 }}</small>
+                                {% if ride.start_zone_id %}
+                                    <br><span class="badge bg-info">{{ ride.start_zone_id }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ride.end_latitude and ride.end_longitude %}
+                                <small>{{ ride.end_latitude|floatformat:4 }}, {{ ride.end_longitude|floatformat:4 }}</small>
+                                {% if ride.end_zone_id %}
+                                    <br><span class="badge bg-info">{{ ride.end_zone_id }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>₱{{ ride.amount_charged|floatformat:2 }}</strong>
+                            <br>
+                            {% if ride.payment_status == 'PAID' %}
+                                <small class="text-success">Paid</small>
+                            {% elif ride.payment_status == 'PENDING' %}
+                                <small class="text-warning">Pending</small>
+                            {% else %}
+                                <small class="text-muted">{{ ride.payment_status }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ride.rental_status == 'COMPLETED' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Completed
+                                </span>
+                            {% elif ride.rental_status == 'ACTIVE' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-bicycle"></i> Active
+                                </span>
+                            {% elif ride.rental_status == 'CANCELLED' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times"></i> Cancelled
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ ride.rental_status }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-bicycle fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No rides found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if rides.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if rides.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rides.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ rides.number }} of {{ rides.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if rides.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rides.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ rides.paginator.num_pages }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

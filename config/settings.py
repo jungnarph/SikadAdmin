@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.bikes',
     'apps.geofencing',
+    'apps.customers',
 ]
 
 MIDDLEWARE = [
