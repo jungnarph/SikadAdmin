@@ -1,0 +1,159 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Geofence Zones - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-map-marked"></i> Geofence Zones</h1>
+        <p class="text-muted">Manage service areas and parking zones</p>
+    </div>
+    <div>
+        <a href="{% url 'geofencing:sync_all_zones' %}" class="btn btn-primary me-2">
+            <i class="fas fa-sync"></i> Sync from Firebase
+        </a>
+        <a href="{% url 'geofencing:zone_create' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Create New Zone
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Zones</h6>
+                        <h2 class="mb-0">{{ total_count }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-map-marked-alt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card" style="border-left-color: #28a745;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Active Zones</h6>
+                        <h2 class="mb-0 text-success">{{ active_count }}</h2>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="is_active" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-7">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Search by name or ID...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Zones Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Zones</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Zone ID</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Points</th>
+                        <th>Status</th>
+                        <th>Color</th>
+                        <th>Last Synced</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for zone in zones %}
+                    <tr>
+                        <td>
+                            <strong>{{ zone.firebase_id }}</strong>
+                        </td>
+                        <td>{{ zone.name }}</td>
+                        <td>
+                            <span class="badge bg-primary">
+                                <i class="fas fa-map"></i> Geofence Zone
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ zone.point_count }} points</span>
+                        </td>
+                        <td>
+                            {% if zone.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: inline-block; width: 30px; height: 20px; background-color: {{ zone.color_code }}; border: 1px solid #ddd; border-radius: 4px;"></div>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ zone.synced_at|timesince }} ago</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'geofencing:zone_detail' zone.firebase_id %}" class="btn btn-outline-primary" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'geofencing:zone_update' zone.firebase_id %}" class="btn btn-outline-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'geofencing:sync_zone' zone.firebase_id %}" class="btn btn-outline-success" title="Sync">
+                                    <i class="fas fa-sync"></i>
+                                </a>
+                                <a href="{% url 'geofencing:zone_delete' zone.firebase_id %}" class="btn btn-outline-danger" title="Deactivate">
+                                    <i class="fas fa-ban"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No zones found. Click "Sync from Firebase" or "Create New Zone".</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,11 +1,6 @@
 """
 Geofencing Models - PostgreSQL Analytics Models
 Primary data stored in Firebase, synced to PostgreSQL for analytics
-
-This file contains 3 models:
-1. Zone - Main geofence zone model
-2. ZoneViolation - Violation tracking
-3. ZonePerformance - Daily performance metrics
 """
 
 from django.db import models
@@ -15,7 +10,6 @@ import uuid
 class Zone(models.Model):
     """
     Geofence zone analytics model synced from Firebase
-    
     Firebase Structure:
     geofence/{zone_id}/
         - name: string
@@ -33,35 +27,29 @@ class Zone(models.Model):
         db_index=True,
         help_text="Document ID from Firebase"
     )
-    name = models.CharField(max_length=100, help_text="Zone name")
-    color_code = models.CharField(
-        max_length=7, 
-        default='#3388ff',
-        help_text="Hex color code for map display"
-    )
+    name = models.CharField(max_length=100)
+    color_code = models.CharField(max_length=7, default='#3388ff')
     is_active = models.BooleanField(default=True)
     
-    # Zone center (calculated from polygon points)
+    # Zone center (calculated from points)
     center_latitude = models.DecimalField(
         max_digits=10, 
         decimal_places=7, 
         null=True, 
-        blank=True,
-        help_text="Center latitude of the zone"
+        blank=True
     )
     center_longitude = models.DecimalField(
         max_digits=10, 
         decimal_places=7, 
         null=True, 
-        blank=True,
-        help_text="Center longitude of the zone"
+        blank=True
     )
     
     # Polygon data stored as JSON for PostgreSQL
-    # Format: [{"latitude": 14.417587, "longitude": 120.884827}, ...]
+    # Format: [{"lat": 14.417587, "lng": 120.884827}, ...]
     polygon_points = models.JSONField(
         default=list,
-        help_text="List of lat/lng points defining the polygon boundary"
+        help_text="List of lat/lng points defining the polygon"
     )
     
     # Metadata
@@ -70,10 +58,9 @@ class Zone(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='created_zones',
-        help_text="Admin user who created this zone"
+        related_name='created_zones'
     )
-    synced_at = models.DateTimeField(auto_now=True, help_text="Last sync from Firebase")
+    synced_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -88,24 +75,18 @@ class Zone(models.Model):
         ordering = ['name']
     
     def __str__(self):
-        return f"{self.name}"
+        return self.name
     
     @property
     def point_count(self):
         """Get number of polygon points"""
         return len(self.polygon_points) if self.polygon_points else 0
-    
-    @property
-    def is_polygon(self):
-        """Check if zone has at least 3 points to form a polygon"""
-        return self.point_count >= 3
 
 
 class ZoneViolation(models.Model):
     """
     Zone violation logs
     Created when bikes leave assigned zones or violate zone rules
-    Synced from Firebase or created by system monitoring
     """
     
     VIOLATION_TYPE_CHOICES = [
@@ -120,8 +101,7 @@ class ZoneViolation(models.Model):
         on_delete=models.CASCADE,
         related_name='violations',
         to_field='firebase_id',
-        db_column='zone_firebase_id',
-        help_text="Reference to zone by Firebase ID"
+        db_column='zone_firebase_id'
     )
     bike_id = models.CharField(
         max_length=255, 
@@ -137,29 +117,20 @@ class ZoneViolation(models.Model):
         max_length=255, 
         null=True, 
         blank=True,
-        db_index=True,
-        help_text="Firebase rental document ID (if applicable)"
+        help_text="Firebase rental document ID"
     )
     
     violation_type = models.CharField(max_length=30, choices=VIOLATION_TYPE_CHOICES)
     
     # Violation location
-    latitude = models.DecimalField(
-        max_digits=10, 
-        decimal_places=7,
-        help_text="Latitude where violation occurred"
-    )
-    longitude = models.DecimalField(
-        max_digits=10, 
-        decimal_places=7,
-        help_text="Longitude where violation occurred"
-    )
+    latitude = models.DecimalField(max_digits=10, decimal_places=7)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7)
     
     # Violation details
-    violation_time = models.DateTimeField(help_text="When the violation occurred")
+    violation_time = models.DateTimeField()
     resolved = models.BooleanField(default=False)
     resolved_at = models.DateTimeField(null=True, blank=True)
-    notes = models.TextField(blank=True, help_text="Additional notes or resolution details")
+    notes = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     
@@ -178,21 +149,12 @@ class ZoneViolation(models.Model):
     
     def __str__(self):
         return f"{self.get_violation_type_display()} - {self.bike_id} at {self.violation_time}"
-    
-    def resolve(self, notes=""):
-        """Mark violation as resolved"""
-        from django.utils import timezone
-        self.resolved = True
-        self.resolved_at = timezone.now()
-        if notes:
-            self.notes = notes
-        self.save()
 
 
 class ZonePerformance(models.Model):
     """
     Daily zone performance metrics (aggregated from rental data)
-    Generated by Celery tasks for analytics dashboard
+    Generated by Celery tasks for analytics
     """
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -201,20 +163,14 @@ class ZonePerformance(models.Model):
         on_delete=models.CASCADE,
         related_name='performance_records',
         to_field='firebase_id',
-        db_column='zone_firebase_id',
-        help_text="Reference to zone by Firebase ID"
+        db_column='zone_firebase_id'
     )
-    performance_date = models.DateField(help_text="Date for this performance record")
-    total_rentals = models.IntegerField(default=0, help_text="Number of rentals started in this zone")
-    total_violations = models.IntegerField(default=0, help_text="Number of violations in this zone")
-    revenue_generated = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        default=0,
-        help_text="Total revenue from rentals in this zone"
-    )
-    unique_bikes = models.IntegerField(default=0, help_text="Number of unique bikes used")
-    unique_customers = models.IntegerField(default=0, help_text="Number of unique customers")
+    performance_date = models.DateField()
+    total_rentals = models.IntegerField(default=0)
+    total_violations = models.IntegerField(default=0)
+    revenue_generated = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    unique_bikes = models.IntegerField(default=0)
+    unique_customers = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -229,4 +185,4 @@ class ZonePerformance(models.Model):
         ordering = ['-performance_date']
     
     def __str__(self):
-        return f"{self.zone.name} - {self.performance_date} ({self.total_rentals} rentals)"
+        return f"{self.zone.name} - {self.performance_date}"

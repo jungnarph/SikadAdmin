@@ -123,7 +123,7 @@ class GeofenceFirebaseService:
         Args:
             zone_id: Document ID for the zone
             zone_data: Dictionary containing zone information
-                Required: name, zone_type, points (list of {lat, lng})
+                Required: name, points (list of {lat, lng})
                 Optional: color_code, is_active
             
         Returns:
@@ -147,7 +147,6 @@ class GeofenceFirebaseService:
             # Prepare zone data
             data = {
                 'name': zone_data.get('name'),
-                'zone_type': zone_data.get('zone_type', 'OPERATIONAL'),
                 'is_active': zone_data.get('is_active', True),
                 'color_code': zone_data.get('color_code', '#3388ff'),
                 'points': firebase_points,
@@ -310,28 +309,3 @@ class GeofenceFirebaseService:
         except Exception as e:
             logger.error(f"Error removing point from zone {zone_id}: {e}")
             return False
-    
-    def get_zones_by_type(self, zone_type: str) -> List[Dict]:
-        """
-        Get all zones of a specific type
-        
-        Args:
-            zone_type: Zone type (PARKING, NO_PARKING, etc.)
-            
-        Returns:
-            List of zones
-        """
-        try:
-            query = self.collection.where('zone_type', '==', zone_type).where('is_active', '==', True)
-            docs = query.stream()
-            
-            zones = []
-            for doc in docs:
-                data = doc.to_dict()
-                data['firebase_id'] = doc.id
-                zones.append(data)
-            
-            return zones
-        except Exception as e:
-            logger.error(f"Error fetching zones by type {zone_type}: {e}")
-            return []
