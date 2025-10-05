@@ -1,0 +1,378 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Zone Violations - Sikad Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .violation-badge {
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .violation-exit {
+        background: #fee;
+        color: #dc3545;
+    }
+    
+    .violation-parking {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .violation-speed {
+        background: #ffeaa7;
+        color: #d63031;
+    }
+    
+    .violation-row {
+        transition: all 0.2s ease;
+    }
+    
+    .violation-row:hover {
+        background: #f8f9fa;
+        cursor: pointer;
+    }
+    
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    #violationMap {
+        height: 400px;
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-exclamation-triangle"></i> Zone Violations</h1>
+        <p class="text-muted">Monitor and manage geofence violations</p>
+    </div>
+    <div>
+        <a href="{% url 'geofencing:zone_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-map-marked-alt"></i> View Zones
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card stat-card" style="border-left: 4px solid #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-2">Total Violations</h6>
+                        <h2 class="mb-0">{{ total_violations }}</h2>
+                        <small class="text-danger">
+                            <i class="fas fa-exclamation-circle"></i> All time
+                        </small>
+                    </div>
+                    <div class="text-danger" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card stat-card" style="border-left: 4px solid #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted text-uppercase mb-2">Unresolved</h6>
+                        <h2 class="mb-0 text-warning">{{ unresolved_count }}</h2>
+                        <small class="text-warning">
+                            <i class="fas fa-clock"></i> Pending action
+                        </small>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Violation Type</label>
+                {{ form.violation_type }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                {{ form.status }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Zone ID</label>
+                {{ form.zone }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bike ID</label>
+                {{ form.bike_id }}
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Violations Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Violations</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Time</th>
+                        <th>Zone</th>
+                        <th>Bike ID</th>
+                        <th>Customer ID</th>
+                        <th>Violation Type</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for violation in violations %}
+                    <tr class="violation-row" data-violation-id="{{ violation.id }}">
+                        <td>
+                            <div>{{ violation.violation_time|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ violation.violation_time|time:"H:i" }}</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'geofencing:zone_detail' violation.zone.firebase_id %}" class="text-decoration-none">
+                                <strong>{{ violation.zone.name }}</strong>
+                            </a>
+                        </td>
+                        <td>
+                            <code>{{ violation.bike_id }}</code>
+                        </td>
+                        <td>
+                            <code>{{ violation.customer_id|truncatechars:12 }}</code>
+                        </td>
+                        <td>
+                            {% if violation.violation_type == 'EXIT_ZONE' %}
+                                <span class="violation-badge violation-exit">
+                                    <i class="fas fa-sign-out-alt"></i> Exit Zone
+                                </span>
+                            {% elif violation.violation_type == 'UNAUTHORIZED_PARKING' %}
+                                <span class="violation-badge violation-parking">
+                                    <i class="fas fa-parking"></i> Parking
+                                </span>
+                            {% else %}
+                                <span class="violation-badge violation-speed">
+                                    <i class="fas fa-tachometer-alt"></i> Speed
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ violation.latitude|floatformat:4 }},
+                                {{ violation.longitude|floatformat:4 }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if violation.resolved %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Resolved
+                                </span>
+                                {% if violation.resolved_at %}
+                                <br><small class="text-muted">{{ violation.resolved_at|timesince }} ago</small>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" 
+                                        onclick="showViolationDetails('{{ violation.id }}', {{ violation.latitude }}, {{ violation.longitude }})"
+                                        title="View on Map">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </button>
+                                {% if not violation.resolved %}
+                                <button class="btn btn-outline-success" 
+                                        onclick="resolveViolation('{{ violation.id }}')"
+                                        title="Mark as Resolved">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                            <p class="text-muted">No violations found</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if violations.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if violations.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ violations.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ violations.number }} of {{ violations.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if violations.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ violations.next_page_number }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ violations.paginator.num_pages }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Violation Details Modal -->
+<div class="modal fade" id="violationModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-map-marker-alt"></i> Violation Location
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="violationMap"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let violationMap = null;
+    let violationMarker = null;
+    
+    function showViolationDetails(violationId, lat, lng) {
+        // Initialize map if not already done
+        if (!violationMap) {
+            const modalEl = document.getElementById('violationModal');
+            modalEl.addEventListener('shown.bs.modal', function() {
+                if (!violationMap) {
+                    violationMap = L.map('violationMap').setView([lat, lng], 15);
+                    
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19
+                    }).addTo(violationMap);
+                }
+            });
+        }
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('violationModal'));
+        modal.show();
+        
+        // Update map position and marker
+        setTimeout(() => {
+            if (violationMap) {
+                violationMap.setView([lat, lng], 16);
+                
+                // Remove old marker
+                if (violationMarker) {
+                    violationMap.removeLayer(violationMarker);
+                }
+                
+                // Add new marker
+                violationMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-exclamation-circle fa-2x" style="color: #dc3545;"></i>',
+                        className: 'violation-marker',
+                        iconSize: [30, 30]
+                    })
+                }).addTo(violationMap);
+                
+                violationMarker.bindPopup(`
+                    <strong>Violation Location</strong><br>
+                    Lat: ${lat.toFixed(6)}<br>
+                    Lng: ${lng.toFixed(6)}
+                `).openPopup();
+                
+                violationMap.invalidateSize();
+            }
+        }, 300);
+    }
+    
+    function resolveViolation(violationId) {
+        if (confirm('Mark this violation as resolved?')) {
+            // TODO: Implement AJAX call to resolve violation
+            // For now, just show alert
+            alert('Violation resolution will be implemented with backend API');
+            
+            // Example AJAX implementation:
+            /*
+            fetch(`/geofencing/violations/${violationId}/resolve/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                }
+            });
+            */
+        }
+    }
+    
+    // Export violations to CSV
+    function exportViolations() {
+        window.location.href = '{% url "geofencing:violation_list" %}?export=csv';
+    }
+</script>
+{% endblock %}

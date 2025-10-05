@@ -2,6 +2,42 @@
 
 {% block title %}Geofence Zones - Sikad Admin{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #zonesOverviewMap {
+        height: 400px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .zone-row {
+        transition: all 0.2s ease;
+    }
+    
+    .zone-row:hover {
+        background: #f8f9fa;
+        cursor: pointer;
+    }
+    
+    .zone-color-indicator {
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        border: 2px solid #dee2e6;
+        display: inline-block;
+    }
+    
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
@@ -52,6 +88,16 @@
     </div>
 </div>
 
+<!-- Map Overview -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-globe"></i> Zones Overview Map</h5>
+    </div>
+    <div class="card-body">
+        <div id="zonesOverviewMap"></div>
+    </div>
+</div>
+
 <!-- Filters -->
 <div class="card mb-4">
     <div class="card-body">
@@ -90,54 +136,67 @@
                     <tr>
                         <th>Zone ID</th>
                         <th>Name</th>
-                        <th>Type</th>
+                        <th>Color</th>
                         <th>Points</th>
                         <th>Status</th>
-                        <th>Color</th>
                         <th>Last Synced</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for zone in zones %}
-                    <tr>
+                    <tr class="zone-row" onclick="window.location='{% url 'geofencing:zone_detail' zone.firebase_id %}'">
                         <td>
                             <strong>{{ zone.firebase_id }}</strong>
                         </td>
-                        <td>{{ zone.name }}</td>
                         <td>
-                            <span class="badge bg-primary">
-                                <i class="fas fa-map"></i> Geofence Zone
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-map-marked-alt text-primary me-2"></i>
+                                {{ zone.name }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="zone-color-indicator" style="background-color: {{ zone.color_code }};"></div>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">
+                                <i class="fas fa-draw-polygon"></i> {{ zone.point_count }} points
                             </span>
                         </td>
                         <td>
-                            <span class="badge bg-secondary">{{ zone.point_count }} points</span>
-                        </td>
-                        <td>
                             {% if zone.is_active %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Active
+                                </span>
                             {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-ban"></i> Inactive
+                                </span>
                             {% endif %}
-                        </td>
-                        <td>
-                            <div style="display: inline-block; width: 30px; height: 20px; background-color: {{ zone.color_code }}; border: 1px solid #ddd; border-radius: 4px;"></div>
                         </td>
                         <td>
                             <small class="text-muted">{{ zone.synced_at|timesince }} ago</small>
                         </td>
-                        <td>
+                        <td onclick="event.stopPropagation();">
                             <div class="btn-group btn-group-sm">
-                                <a href="{% url 'geofencing:zone_detail' zone.firebase_id %}" class="btn btn-outline-primary" title="View Details">
+                                <a href="{% url 'geofencing:zone_detail' zone.firebase_id %}" 
+                                   class="btn btn-outline-primary" 
+                                   title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <a href="{% url 'geofencing:zone_update' zone.firebase_id %}" class="btn btn-outline-warning" title="Edit">
+                                <a href="{% url 'geofencing:zone_update' zone.firebase_id %}" 
+                                   class="btn btn-outline-warning" 
+                                   title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </a>
-                                <a href="{% url 'geofencing:sync_zone' zone.firebase_id %}" class="btn btn-outline-success" title="Sync">
+                                <a href="{% url 'geofencing:sync_zone' zone.firebase_id %}" 
+                                   class="btn btn-outline-success" 
+                                   title="Sync">
                                     <i class="fas fa-sync"></i>
                                 </a>
-                                <a href="{% url 'geofencing:zone_delete' zone.firebase_id %}" class="btn btn-outline-danger" title="Deactivate">
+                                <a href="{% url 'geofencing:zone_delete' zone.firebase_id %}" 
+                                   class="btn btn-outline-danger" 
+                                   title="Deactivate">
                                     <i class="fas fa-ban"></i>
                                 </a>
                             </div>
@@ -145,7 +204,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
                             <p class="text-muted">No zones found. Click "Sync from Firebase" or "Create New Zone".</p>
                         </td>
@@ -156,4 +215,97 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // Initialize overview map
+    const map = L.map('zonesOverviewMap').setView([14.8433, 120.8111], 12);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Add all zones to map
+    const zones = [
+        {% for zone in zones %}
+        {% if zone.polygon_points %}
+        {
+            id: '{{ zone.firebase_id }}',
+            name: '{{ zone.name }}',
+            color: '{{ zone.color_code }}',
+            active: {{ zone.is_active|yesno:"true,false" }},
+            points: {{ zone.polygon_points|safe }}
+        },
+        {% endif %}
+        {% endfor %}
+    ];
+    
+    // Draw all zones
+    const zonePolygons = [];
+    zones.forEach(zone => {
+        if (zone.points && zone.points.length > 0) {
+            const latLngs = zone.points.map(p => [p.latitude, p.longitude]);
+            
+            const polygon = L.polygon(latLngs, {
+                color: zone.color,
+                fillColor: zone.color,
+                fillOpacity: zone.active ? 0.3 : 0.1,
+                weight: zone.active ? 3 : 2,
+                opacity: zone.active ? 1 : 0.5
+            }).addTo(map);
+            
+            polygon.bindPopup(`
+                <div style="min-width: 180px;">
+                    <h6><strong>${zone.name}</strong></h6>
+                    <p class="mb-1"><small><strong>ID:</strong> ${zone.id}</small></p>
+                    <p class="mb-1"><small><strong>Points:</strong> ${zone.points.length}</small></p>
+                    <p class="mb-0"><small><strong>Status:</strong> 
+                        <span style="color: ${zone.active ? '#28a745' : '#6c757d'};">
+                            ${zone.active ? 'Active' : 'Inactive'}
+                        </span>
+                    </small></p>
+                    <a href="/geofencing/${zone.id}/" class="btn btn-sm btn-primary mt-2 w-100">View Details</a>
+                </div>
+            `);
+            
+            // Add click event
+            polygon.on('click', function() {
+                window.location.href = `/geofencing/${zone.id}/`;
+            });
+            
+            zonePolygons.push(polygon);
+        }
+    });
+    
+    // Fit map to show all zones
+    if (zonePolygons.length > 0) {
+        const group = L.featureGroup(zonePolygons);
+        map.fitBounds(group.getBounds(), { padding: [50, 50] });
+    }
+    
+    // Add legend
+    const legend = L.control({ position: 'bottomright' });
+    legend.onAdd = function(map) {
+        const div = L.DomUtil.create('div', 'info legend');
+        div.style.background = 'white';
+        div.style.padding = '10px';
+        div.style.borderRadius = '8px';
+        div.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        
+        div.innerHTML = `
+            <strong>Zones</strong><br>
+            <div style="margin-top: 8px;">
+                <i style="background: rgba(40, 167, 69, 0.3); width: 18px; height: 18px; display: inline-block; border: 2px solid #28a745; margin-right: 5px;"></i> Active<br>
+                <i style="background: rgba(108, 117, 125, 0.1); width: 18px; height: 18px; display: inline-block; border: 2px solid #6c757d; margin-right: 5px; margin-top: 5px;"></i> Inactive
+            </div>
+        `;
+        
+        return div;
+    };
+    legend.addTo(map);
+</script>
 {% endblock %}

@@ -19,12 +19,9 @@ def zone_list(request):
     zones = Zone.objects.all().order_by('name')
     
     # Apply filters
-    zone_type = request.GET.get('zone_type')
     is_active = request.GET.get('is_active')
     search = request.GET.get('search')
     
-    if zone_type:
-        zones = zones.filter(zone_type=zone_type)
     if is_active == 'active':
         zones = zones.filter(is_active=True)
     elif is_active == 'inactive':
@@ -85,15 +82,17 @@ def zone_create(request):
             
             if existing_zone:
                 messages.error(request, f'Zone {zone_id} already exists!')
-                return render(request, 'geofencing/zone_form.html', {'form': form})
+                return render(request, 'geofencing/zone_form.html', {
+                    'form': form,
+                    'title': 'Create New Zone',
+                    'action': 'Create'
+                })
             
             # Prepare zone data
-            import json
             polygon_points = json.loads(form.cleaned_data['polygon_points'])
             
             zone_data = {
                 'name': form.cleaned_data['name'],
-                'zone_type': form.cleaned_data['zone_type'],
                 'color_code': form.cleaned_data['color_code'],
                 'points': polygon_points,
             }
@@ -141,9 +140,8 @@ def zone_update(request, zone_id):
             # Prepare update data
             updates = {
                 'name': form.cleaned_data['name'],
-                'zone_type': form.cleaned_data['zone_type'],
                 'color_code': form.cleaned_data['color_code'],
-                'is_active': form.cleaned_data['is_active'],
+                'is_active': form.cleaned_data.get('is_active', True),
             }
             
             if form.cleaned_data.get('description'):
@@ -151,7 +149,6 @@ def zone_update(request, zone_id):
             
             # Update polygon if provided
             if form.cleaned_data.get('polygon_points'):
-                import json
                 updates['points'] = json.loads(form.cleaned_data['polygon_points'])
             
             # Update in Firebase
@@ -170,10 +167,8 @@ def zone_update(request, zone_id):
             messages.error(request, 'Please correct the errors below')
     else:
         # Pre-fill form with existing data
-        import json
         initial_data = {
             'name': zone_data.get('name'),
-            'zone_type': zone_data.get('zone_type'),
             'color_code': zone_data.get('color_code', '#3388ff'),
             'description': zone_data.get('description', ''),
             'is_active': zone_data.get('is_active', True),

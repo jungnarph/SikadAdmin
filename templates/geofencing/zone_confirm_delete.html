@@ -1,0 +1,90 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Deactivate Zone - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'geofencing:zone_detail' zone_id %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Zone Details
+            </a>
+            <h1><i class="fas fa-ban text-warning"></i> Deactivate Zone</h1>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Deactivation Confirmation</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Note:</strong> This is a soft delete. The zone can be reactivated later.
+                </div>
+                
+                <p class="lead">Are you sure you want to deactivate this zone?</p>
+                
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Zone Details:</h6>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted" width="40%">Zone ID:</td>
+                                <td><strong>{{ zone.firebase_id }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Name:</td>
+                                <td>{{ zone.name }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Points:</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ zone.polygon_points|length }} vertices</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Current Status:</td>
+                                <td>
+                                    {% if zone.is_active %}
+                                        <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <strong>What will happen:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Zone status will be changed to <strong>Inactive</strong></li>
+                        <li>Zone will be hidden from active zone lists</li>
+                        <li>All boundary data will be preserved</li>
+                        <li>Violation history will be retained</li>
+                        <li>Zone can be reactivated at any time</li>
+                        <li>Bikes currently in this zone will not be affected</li>
+                    </ul>
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'geofencing:zone_detail' zone_id %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-ban"></i> Yes, Deactivate Zone
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

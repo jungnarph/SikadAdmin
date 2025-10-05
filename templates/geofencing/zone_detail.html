@@ -1,0 +1,362 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Zone Details - {{ zone.name }} - Sikad Admin{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #zoneMap {
+        height: 500px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #6c757d;
+    }
+    
+    .violation-badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .violation-exit {
+        background: #fee;
+        color: #dc3545;
+    }
+    
+    .violation-parking {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .violation-speed {
+        background: #ffeaa7;
+        color: #d63031;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'geofencing:zone_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Zones
+            </a>
+            <h1><i class="fas fa-map-marked-alt"></i> {{ zone.name }}</h1>
+            <p class="text-muted">Zone ID: {{ zone.firebase_id }}</p>
+        </div>
+        <div>
+            <a href="{% url 'geofencing:zone_update' zone.firebase_id %}" class="btn btn-warning me-2">
+                <i class="fas fa-edit"></i> Edit Zone
+            </a>
+            <a href="{% url 'geofencing:sync_zone' zone.firebase_id %}" class="btn btn-success me-2">
+                <i class="fas fa-sync"></i> Sync Now
+            </a>
+            {% if zone.is_active %}
+            <a href="{% url 'geofencing:zone_delete' zone.firebase_id %}" class="btn btn-danger">
+                <i class="fas fa-ban"></i> Deactivate
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Zone Information -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Zone Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="info-label">Name:</span>
+                        <strong>{{ zone.name }}</strong>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Zone ID:</span>
+                        <code>{{ zone.firebase_id }}</code>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        {% if zone.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Color:</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 30px; height: 20px; background: {{ zone.color_code }}; border: 1px solid #ddd; border-radius: 4px;"></div>
+                            <code>{{ zone.color_code }}</code>
+                        </div>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Points:</span>
+                        <strong>{{ zone.polygon_points|length }} vertices</strong>
+                    </div>
+                </div>
+
+                {% if zone.center_latitude and zone.center_longitude %}
+                <div class="info-card">
+                    <h6 class="mb-3"><i class="fas fa-map-marker-alt"></i> Center Coordinates</h6>
+                    <div class="info-row">
+                        <span class="info-label">Latitude:</span>
+                        <code>{{ zone.center_latitude|floatformat:6 }}</code>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Longitude:</span>
+                        <code>{{ zone.center_longitude|floatformat:6 }}</code>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Polygon Points -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Polygon Coordinates</h5>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for point in zone.polygon_points %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td><small>{{ point.latitude|floatformat:6 }}</small></td>
+                            <td><small>{{ point.longitude|floatformat:6 }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">
+                                No points defined
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sync Info -->
+        {% if pg_zone %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Sync Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="info-row">
+                    <span class="info-label">Last Synced:</span>
+                    <span>{{ pg_zone.synced_at|timesince }} ago</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">PostgreSQL ID:</span>
+                    <code>{{ pg_zone.id }}</code>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Created:</span>
+                    <span>{{ pg_zone.created_at|date:"M d, Y" }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Map and Violations -->
+    <div class="col-md-8">
+        <!-- Zone Map -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map"></i> Zone Boundary</h5>
+            </div>
+            <div class="card-body">
+                {% if zone.polygon_points %}
+                    <div id="zoneMap"></div>
+                    <div class="mt-3 alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Zone Area:</strong> This geofenced area defines where bikes can be used and parked.
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No polygon data available</p>
+                        <a href="{% url 'geofencing:zone_update' zone.firebase_id %}" class="btn btn-primary">
+                            <i class="fas fa-edit"></i> Add Zone Boundary
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Violations -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Recent Violations</h5>
+                <a href="{% url 'geofencing:violation_list' %}?zone={{ zone.firebase_id }}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Time</th>
+                                <th>Bike ID</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for violation in violations %}
+                            <tr>
+                                <td>
+                                    <small>{{ violation.violation_time|date:"M d, H:i" }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ violation.bike_id }}</strong>
+                                </td>
+                                <td>
+                                    {% if violation.violation_type == 'EXIT_ZONE' %}
+                                        <span class="violation-badge violation-exit">Exit Zone</span>
+                                    {% elif violation.violation_type == 'UNAUTHORIZED_PARKING' %}
+                                        <span class="violation-badge violation-parking">Parking</span>
+                                    {% else %}
+                                        <span class="violation-badge violation-speed">Speed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if violation.resolved %}
+                                        <span class="badge bg-success">Resolved</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                    <p class="text-muted mb-0">No violations recorded</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    {% if zone.polygon_points %}
+    // Initialize map
+    const centerLat = {{ zone.center_latitude|default:14.8433 }};
+    const centerLng = {{ zone.center_longitude|default:120.8111 }};
+    const map = L.map('zoneMap').setView([centerLat, centerLng], 14);
+    
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Get polygon points from Django
+    const polygonPoints = {{ zone.polygon_points|safe }};
+    
+    // Convert to Leaflet format
+    const latLngs = polygonPoints.map(point => [point.latitude, point.longitude]);
+    
+    // Draw polygon
+    const polygon = L.polygon(latLngs, {
+        color: '{{ zone.color_code }}',
+        fillColor: '{{ zone.color_code }}',
+        fillOpacity: 0.3,
+        weight: 3
+    }).addTo(map);
+    
+    // Add popup to polygon
+    polygon.bindPopup(`
+        <div style="min-width: 200px;">
+            <h6><strong>{{ zone.name }}</strong></h6>
+            <p class="mb-1"><small><strong>Zone ID:</strong> {{ zone.firebase_id }}</small></p>
+            <p class="mb-1"><small><strong>Points:</strong> ${latLngs.length}</small></p>
+            <p class="mb-0"><small><strong>Status:</strong> 
+                {% if zone.is_active %}
+                <span style="color: #28a745;">Active</span>
+                {% else %}
+                <span style="color: #6c757d;">Inactive</span>
+                {% endif %}
+            </small></p>
+        </div>
+    `);
+    
+    // Add markers for each point
+    latLngs.forEach((point, index) => {
+        const marker = L.circleMarker(point, {
+            radius: 5,
+            fillColor: '{{ zone.color_code }}',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8
+        }).addTo(map);
+        
+        marker.bindPopup(`<strong>Point ${index + 1}</strong><br>
+            Lat: ${point[0].toFixed(6)}<br>
+            Lng: ${point[1].toFixed(6)}`);
+    });
+    
+    // Fit map to polygon bounds
+    map.fitBounds(polygon.getBounds(), { padding: [50, 50] });
+    
+    // Add center marker
+    const centerMarker = L.marker([centerLat, centerLng], {
+        icon: L.divIcon({
+            html: '<i class="fas fa-crosshairs fa-2x" style="color: {{ zone.color_code }};"></i>',
+            className: 'center-marker',
+            iconSize: [30, 30]
+        })
+    }).addTo(map);
+    
+    centerMarker.bindPopup('<strong>Zone Center</strong>');
+    {% endif %}
+</script>
+{% endblock %}
