@@ -42,17 +42,15 @@ class CustomerSyncService:
                     'email': firebase_data.get('email', ''),
                     'phone_number': firebase_data.get('phone_number', ''),
                     'full_name': firebase_data.get('full_name', ''),
+                    'username': firebase_data.get('username', ''),
                     'profile_image_url': firebase_data.get('profile_image_url'),
                     'status': firebase_data.get('status', 'ACTIVE'),
                     'verification_status': firebase_data.get('verification_status', 'UNVERIFIED'),
-                    'id_document_url': firebase_data.get('id_document_url'),
-                    'id_document_type': firebase_data.get('id_document_type', ''),
                     'email_verified': firebase_data.get('email_verified', False),
                     'phone_verified': firebase_data.get('phone_verified', False),
                     'registration_date': firebase_data.get('created_at'),
                     'last_login': firebase_data.get('last_login'),
                     'suspension_reason': firebase_data.get('suspension_reason', ''),
-                    'admin_notes': firebase_data.get('admin_notes', ''),
                 }
             )
             
@@ -103,17 +101,15 @@ class CustomerSyncService:
                             'email': customer_data.get('email', ''),
                             'phone_number': customer_data.get('phone_number', ''),
                             'full_name': customer_data.get('full_name', ''),
+                            'username': customer_data.get('username', ''),
                             'profile_image_url': customer_data.get('profile_image_url'),
                             'status': customer_data.get('status', 'ACTIVE'),
                             'verification_status': customer_data.get('verification_status', 'UNVERIFIED'),
-                            'id_document_url': customer_data.get('id_document_url'),
-                            'id_document_type': customer_data.get('id_document_type', ''),
                             'email_verified': customer_data.get('email_verified', False),
                             'phone_verified': customer_data.get('phone_verified', False),
                             'registration_date': customer_data.get('created_at'),
                             'last_login': customer_data.get('last_login'),
                             'suspension_reason': customer_data.get('suspension_reason', ''),
-                            'admin_notes': customer_data.get('admin_notes', ''),
                         }
                     )
                     

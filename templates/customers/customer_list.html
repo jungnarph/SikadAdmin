@@ -104,9 +104,7 @@
                 <select name="verification" class="form-select">
                     <option value="">All Verification</option>
                     <option value="UNVERIFIED">Unverified</option>
-                    <option value="PENDING">Pending</option>
                     <option value="VERIFIED">Verified</option>
-                    <option value="REJECTED">Rejected</option>
                 </select>
             </div>
             <div class="col-md-5">
@@ -190,14 +188,6 @@
                             {% if customer.verification_status == 'VERIFIED' %}
                                 <span class="badge bg-success">
                                     <i class="fas fa-shield-alt"></i> Verified
-                                </span>
-                            {% elif customer.verification_status == 'PENDING' %}
-                                <span class="badge bg-warning">
-                                    <i class="fas fa-clock"></i> Pending
-                                </span>
-                            {% elif customer.verification_status == 'REJECTED' %}
-                                <span class="badge bg-danger">
-                                    <i class="fas fa-times"></i> Rejected
                                 </span>
                             {% else %}
                                 <span class="badge bg-secondary">

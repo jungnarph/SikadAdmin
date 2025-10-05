@@ -113,60 +113,23 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label"><strong>ID Verification:</strong></label>
+                    <label class="form-label"><strong>Account Verification:</strong></label>
                     <div>
                         {% if customer.verification_status == 'VERIFIED' %}
                             <span class="badge bg-success"><i class="fas fa-shield-alt"></i> Verified</span>
-                        {% elif customer.verification_status == 'PENDING' %}
-                            <span class="badge bg-warning"><i class="fas fa-clock"></i> Pending Review</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="fas fa-question"></i> Unverified</span>
                             <div class="mt-2">
-                                <form method="post" action="{% url 'customers:customer_verify_document' customer.firebase_id %}" class="d-inline">
+                                <form method="post" action="{% url 'customers:customer_verify' customer.firebase_id %}" class="d-inline">
                                     {% csrf_token %}
-                                    <button type="submit" name="action" value="verify" class="btn btn-sm btn-success">
-                                        <i class="fas fa-check"></i> Approve
-                                    </button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-sm btn-danger">
-                                        <i class="fas fa-times"></i> Reject
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="fas fa-check"></i> Mark as Verified
                                     </button>
                                 </form>
                             </div>
-                        {% elif customer.verification_status == 'REJECTED' %}
-                            <span class="badge bg-danger"><i class="fas fa-times"></i> Rejected</span>
-                        {% else %}
-                            <span class="badge bg-secondary"><i class="fas fa-question"></i> Not Submitted</span>
                         {% endif %}
                     </div>
                 </div>
-                
-                {% if customer.id_document_url %}
-                <div>
-                    <a href="{{ customer.id_document_url }}" target="_blank" class="btn btn-sm btn-outline-primary w-100">
-                        <i class="fas fa-file-image"></i> View ID Document
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Admin Notes -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">Admin Notes</h5>
-            </div>
-            <div class="card-body">
-                {% if customer.admin_notes %}
-                <div class="alert alert-info" style="white-space: pre-wrap; font-size: 12px;">{{ customer.admin_notes }}</div>
-                {% else %}
-                <p class="text-muted">No notes yet</p>
-                {% endif %}
-                
-                <form method="post" action="{% url 'customers:customer_add_note' customer.firebase_id %}">
-                    {% csrf_token %}
-                    <textarea name="note" class="form-control form-control-sm mb-2" rows="3" placeholder="Add a note..."></textarea>
-                    <button type="submit" class="btn btn-sm btn-primary w-100">
-                        <i class="fas fa-plus"></i> Add Note
-                    </button>
-                </form>
             </div>
         </div>
     </div>

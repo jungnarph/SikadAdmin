@@ -40,10 +40,6 @@ class CustomerAdmin(admin.ModelAdmin):
         ('Account Status', {
             'fields': ('status', 'verification_status', 'email_verified', 'phone_verified')
         }),
-        ('Verification Documents', {
-            'fields': ('id_document_url', 'id_document_type', 'id_verified_at'),
-            'classes': ('collapse',)
-        }),
         ('Statistics', {
             'fields': ('total_rides', 'total_spent', 'account_balance'),
             'classes': ('collapse',)
@@ -52,8 +48,8 @@ class CustomerAdmin(admin.ModelAdmin):
             'fields': ('suspension_reason', 'suspended_at', 'suspended_by'),
             'classes': ('collapse',)
         }),
-        ('Admin Notes', {
-            'fields': ('admin_notes',),
+        ('Additional Info', {
+            'fields': ('username',),
             'classes': ('collapse',)
         }),
         ('Dates', {

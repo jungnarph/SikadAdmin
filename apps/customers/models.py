@@ -29,9 +29,7 @@ class Customer(models.Model):
     
     VERIFICATION_STATUS_CHOICES = [
         ('UNVERIFIED', 'Unverified'),
-        ('PENDING', 'Pending'),
         ('VERIFIED', 'Verified'),
-        ('REJECTED', 'Rejected'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -60,11 +58,6 @@ class Customer(models.Model):
         default='UNVERIFIED'
     )
     
-    # Verification Documents
-    id_document_url = models.URLField(max_length=500, blank=True, null=True)
-    id_document_type = models.CharField(max_length=50, blank=True)
-    id_verified_at = models.DateTimeField(null=True, blank=True)
-    
     # Account Dates
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
@@ -87,8 +80,8 @@ class Customer(models.Model):
         related_name='suspended_customers'
     )
     
-    # Notes
-    admin_notes = models.TextField(blank=True, help_text="Internal notes for admins")
+    # Username (optional display name)
+    username = models.CharField(max_length=150, blank=True, help_text="Customer's chosen username")
     
     # Sync metadata
     synced_at = models.DateTimeField(auto_now=True)

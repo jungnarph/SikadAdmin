@@ -21,8 +21,7 @@ urlpatterns = [
     # Account actions
     path('<str:customer_id>/suspend/', views.customer_suspend, name='customer_suspend'),
     path('<str:customer_id>/reactivate/', views.customer_reactivate, name='customer_reactivate'),
-    path('<str:customer_id>/verify-document/', views.customer_verify_document, name='customer_verify_document'),
-    path('<str:customer_id>/add-note/', views.customer_add_note, name='customer_add_note'),
+    path('<str:customer_id>/verify/', views.customer_verify, name='customer_verify'),
     
     # Sync operations
     path('<str:customer_id>/sync/', views.sync_customer, name='sync_customer'),

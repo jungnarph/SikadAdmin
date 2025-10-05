@@ -106,9 +106,7 @@ class CustomerFilterForm(forms.Form):
     VERIFICATION_CHOICES = [
         ('', 'All Verification Status'),
         ('UNVERIFIED', 'Unverified'),
-        ('PENDING', 'Pending'),
         ('VERIFIED', 'Verified'),
-        ('REJECTED', 'Rejected'),
     ]
     
     status = forms.ChoiceField(

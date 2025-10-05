@@ -227,13 +227,12 @@ class CustomerFirebaseService:
             logger.error(f"Error getting statistics for customer {customer_id}: {e}")
             return {}
     
-    def verify_customer_document(self, customer_id: str, verified: bool = True) -> bool:
+    def verify_customer(self, customer_id: str) -> bool:
         """
-        Verify or reject customer ID document
+        Mark customer as verified (email and phone verified)
         
         Args:
             customer_id: Firebase document ID
-            verified: True to verify, False to reject
             
         Returns:
             True if successful, False otherwise
@@ -241,19 +240,12 @@ class CustomerFirebaseService:
         try:
             doc_ref = self.collection.document(customer_id)
             
-            if verified:
-                doc_ref.update({
-                    'verification_status': 'VERIFIED',
-                    'id_verified_at': firestore.SERVER_TIMESTAMP,
-                    'updated_at': firestore.SERVER_TIMESTAMP
-                })
-            else:
-                doc_ref.update({
-                    'verification_status': 'REJECTED',
-                    'updated_at': firestore.SERVER_TIMESTAMP
-                })
+            doc_ref.update({
+                'verification_status': 'VERIFIED',
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
             
-            logger.info(f"Updated verification status for customer {customer_id}")
+            logger.info(f"Verified customer {customer_id}")
             return True
         except Exception as e:
             logger.error(f"Error verifying customer {customer_id}: {e}")

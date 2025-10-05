@@ -294,55 +294,20 @@ def customer_rides(request, customer_id):
 
 
 @login_required
-def customer_verify_document(request, customer_id):
-    """Verify or reject customer ID document"""
+def customer_verify(request, customer_id):
+    """Mark customer as verified"""
     if request.method == 'POST':
-        action = request.POST.get('action')  # 'verify' or 'reject'
-        
         firebase_service = CustomerFirebaseService()
-        success = firebase_service.verify_customer_document(
-            customer_id,
-            verified=(action == 'verify')
-        )
+        success = firebase_service.verify_customer(customer_id)
         
         if success:
             # Sync to PostgreSQL
             sync_service = CustomerSyncService()
             sync_service.sync_single_customer(customer_id)
             
-            status = 'verified' if action == 'verify' else 'rejected'
-            messages.success(request, f'Customer document has been {status}')
+            messages.success(request, f'Customer {customer_id} has been verified')
         else:
-            messages.error(request, 'Failed to update verification status')
-        
-        return redirect('customers:customer_detail', customer_id=customer_id)
-    
-    return redirect('customers:customer_detail', customer_id=customer_id)
-
-
-@login_required
-def customer_add_note(request, customer_id):
-    """Add admin note to customer"""
-    if request.method == 'POST':
-        form = CustomerNoteForm(request.POST)
-        if form.is_valid():
-            note = form.cleaned_data['note']
-            
-            firebase_service = CustomerFirebaseService()
-            success = firebase_service.add_admin_note(
-                customer_id,
-                note,
-                request.user.username
-            )
-            
-            if success:
-                # Sync to PostgreSQL
-                sync_service = CustomerSyncService()
-                sync_service.sync_single_customer(customer_id)
-                
-                messages.success(request, 'Note added successfully')
-            else:
-                messages.error(request, 'Failed to add note')
+            messages.error(request, 'Failed to verify customer')
         
         return redirect('customers:customer_detail', customer_id=customer_id)
     
