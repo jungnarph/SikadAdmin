@@ -120,14 +120,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted text-uppercase mb-2">Maintenance</h6>
-                        <h2 class="mb-0">{{ maintenance_bikes }}</h2>
+                        <h6 class="text-muted text-uppercase mb-2">Offline</h6>
+                        <h2 class="mb-0">{{ offline_bikes }}</h2>
                         <small class="text-danger">
-                            <i class="fas fa-wrench"></i> Needs attention
+                            <i class="fas fa-power-off"></i> Not available
                         </small>
                     </div>
                     <div class="text-danger stat-icon">
-                        <i class="fas fa-tools"></i>
+                        <i class="fas fa-power-off"></i>
                     </div>
                 </div>
             </div>
@@ -171,19 +171,6 @@
                 
                 <div class="mb-3">
                     <div class="d-flex justify-content-between mb-2">
-                        <span><i class="fas fa-circle text-warning"></i> Maintenance</span>
-                        <strong>{{ maintenance_bikes }} bikes</strong>
-                    </div>
-                    <div class="progress" style="height: 25px;">
-                        <div class="progress-bar bg-warning" role="progressbar" 
-                             style="width: {{ maintenance_percentage }}%">
-                            {{ maintenance_percentage }}%
-                        </div>
-                    </div>
-                </div>
-                
-                <div>
-                    <div class="d-flex justify-content-between mb-2">
                         <span><i class="fas fa-circle text-danger"></i> Offline</span>
                         <strong>{{ offline_bikes }} bikes</strong>
                     </div>
@@ -214,6 +201,9 @@
                     </a>
                     <a href="{% url 'bikes:sync_all_bikes' %}" class="btn btn-outline-info">
                         <i class="fas fa-sync"></i> Sync Bikes
+                    </a>
+                    <a href="" class="btn btn-outline-warning">
+                        <i class="fas fa-sync"></i> Sync Zones
                     </a>
                 </div>
                 

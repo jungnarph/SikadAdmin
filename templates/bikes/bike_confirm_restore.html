@@ -1,0 +1,93 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Restore Bike - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'bikes:bike_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+            <h1><i class="fas fa-undo text-success"></i> Restore Bike</h1>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-undo"></i> Restore Confirmation</h5>
+            </div>
+            <div class="card-body">
+                <p class="lead">Restore this bike back to active service?</p>
+                
+                <div class="card bg-light mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title">Bike Details:</h6>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="text-muted" width="40%">Bike ID:</td>
+                                <td><strong>{{ bike.firebase_id }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Model:</td>
+                                <td>{{ bike.bike_model }}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Type:</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ bike.bike_type }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Current Status:</td>
+                                <td>
+                                    <span class="badge bg-secondary">ARCHIVED</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="status" class="form-label">
+                            <strong>Restore to Status:</strong>
+                        </label>
+                        <select name="status" id="status" class="form-select" required>
+                            <option value="AVAILABLE" selected>Available</option>
+                            <option value="OFFLINE">Offline</option>
+                        </select>
+                        <div class="form-text">
+                            Choose the status this bike should have after restoration
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success">
+                        <strong>What will happen:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Bike status will be updated to your selection</li>
+                            <li>Bike will appear in active bike lists</li>
+                            <li>All data and history is preserved</li>
+                            <li>Restoration timestamp will be recorded</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{% url 'bikes:bike_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-undo"></i> Restore Bike
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -237,7 +237,8 @@ class BikeFirebaseService:
     
     def delete_bike(self, bike_id: str) -> bool:
         """
-        Delete a bike from Firebase (or mark as inactive)
+        Archive a bike in Firebase (soft delete with timestamp)
+        Moves bike to archived state instead of deleting
         
         Args:
             bike_id: Firebase document ID
@@ -248,16 +249,68 @@ class BikeFirebaseService:
         try:
             doc_ref = self.collection.document(bike_id)
             
-            # Soft delete - mark as OFFLINE
+            # Archive - mark as archived with timestamp
             doc_ref.update({
-                'status': 'OFFLINE',
+                'status': 'ARCHIVED',
+                'archived_at': firestore.SERVER_TIMESTAMP,
                 'updated_at': firestore.SERVER_TIMESTAMP
             })
             
-            logger.info(f"Soft deleted bike {bike_id}")
+            logger.info(f"Archived bike {bike_id}")
             return True
         except Exception as e:
-            logger.error(f"Error deleting bike {bike_id}: {e}")
+            logger.error(f"Error archiving bike {bike_id}: {e}")
+            return False
+    
+    def restore_bike(self, bike_id: str, new_status: str = 'AVAILABLE') -> bool:
+        """
+        Restore an archived bike
+        
+        Args:
+            bike_id: Firebase document ID
+            new_status: Status to set after restoration (default: AVAILABLE)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            doc_ref = self.collection.document(bike_id)
+            
+            # Restore bike
+            doc_ref.update({
+                'status': new_status,
+                'archived_at': firestore.DELETE_FIELD,  # Remove archived timestamp
+                'restored_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            logger.info(f"Restored bike {bike_id} to status {new_status}")
+            return True
+        except Exception as e:
+            logger.error(f"Error restoring bike {bike_id}: {e}")
+            return False
+    
+    def permanently_delete_bike(self, bike_id: str) -> bool:
+        """
+        Permanently delete a bike from Firebase (use with caution)
+        This is a hard delete and cannot be undone
+        
+        Args:
+            bike_id: Firebase document ID
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            doc_ref = self.collection.document(bike_id)
+            
+            # Hard delete - permanently remove the document
+            doc_ref.delete()
+            
+            logger.warning(f"PERMANENTLY deleted bike {bike_id} from Firebase")
+            return True
+        except Exception as e:
+            logger.error(f"Error permanently deleting bike {bike_id}: {e}")
             return False
     
     def update_bike_status(self, bike_id: str, status: str) -> bool:

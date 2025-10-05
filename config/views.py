@@ -17,19 +17,16 @@ def dashboard(request):
     total_bikes = Bike.objects.count()
     available_bikes = Bike.objects.filter(status='AVAILABLE').count()
     in_use_bikes = Bike.objects.filter(status='IN_USE').count()
-    maintenance_bikes = Bike.objects.filter(status='MAINTENANCE').count()
     offline_bikes = Bike.objects.filter(status='OFFLINE').count()
     
     # Calculate percentages
     if total_bikes > 0:
         available_percentage = round((available_bikes / total_bikes) * 100, 1)
         in_use_percentage = round((in_use_bikes / total_bikes) * 100, 1)
-        maintenance_percentage = round((maintenance_bikes / total_bikes) * 100, 1)
         offline_percentage = round((offline_bikes / total_bikes) * 100, 1)
     else:
         available_percentage = 0
         in_use_percentage = 0
-        maintenance_percentage = 0
         offline_percentage = 0
     
     # Zone statistics
@@ -50,11 +47,9 @@ def dashboard(request):
         'total_bikes': total_bikes,
         'available_bikes': available_bikes,
         'in_use_bikes': in_use_bikes,
-        'maintenance_bikes': maintenance_bikes,
         'offline_bikes': offline_bikes,
         'available_percentage': available_percentage,
         'in_use_percentage': in_use_percentage,
-        'maintenance_percentage': maintenance_percentage,
         'offline_percentage': offline_percentage,
         'total_zones': total_zones,
         'active_zones': active_zones,

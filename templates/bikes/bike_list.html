@@ -12,7 +12,7 @@
         <a href="{% url 'bikes:sync_all_bikes' %}" class="btn btn-primary me-2">
             <i class="fas fa-sync"></i> Sync from Firebase
         </a>
-        <a href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addBikeModal">
+        <a href="{% url 'bikes:bike_create' %}" class="btn btn-success">
             <i class="fas fa-plus"></i> Add New Bike
         </a>
     </div>
@@ -66,15 +66,15 @@
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card stat-card" style="border-left-color: #ffc107;">
+        <div class="card stat-card" style="border-left-color: #dc3545;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">Maintenance</h6>
-                        <h2 class="mb-0 text-warning">{{ maintenance_count }}</h2>
+                        <h6 class="text-muted mb-2">Offline</h6>
+                        <h2 class="mb-0 text-danger">{{ offline_count }}</h2>
                     </div>
-                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
-                        <i class="fas fa-wrench"></i>
+                    <div class="text-danger" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-power-off"></i>
                     </div>
                 </div>
             </div>
@@ -154,8 +154,8 @@
                                 <span class="badge badge-available">Available</span>
                             {% elif bike.status == 'IN_USE' %}
                                 <span class="badge badge-rented">In Use</span>
-                            {% elif bike.status == 'MAINTENANCE' %}
-                                <span class="badge badge-maintenance">Maintenance</span>
+                            {% elif bike.status == 'ARCHIVED' %}
+                                <span class="badge bg-secondary">Archived</span>
                             {% else %}
                                 <span class="badge badge-offline">Offline</span>
                             {% endif %}
@@ -184,12 +184,15 @@
                                 <a href="{% url 'bikes:bike_detail' bike.firebase_id %}" class="btn btn-outline-primary" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                <a href="{% url 'bikes:bike_update' bike.firebase_id %}" class="btn btn-outline-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
                                 <a href="{% url 'bikes:sync_bike' bike.firebase_id %}" class="btn btn-outline-success" title="Sync">
                                     <i class="fas fa-sync"></i>
                                 </a>
-                                <button class="btn btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                                <a href="{% url 'bikes:bike_delete' bike.firebase_id %}" class="btn btn-outline-danger" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </a>
                             </div>
                         </td>
                     </tr>

@@ -23,9 +23,21 @@
             <h1><i class="fas fa-bicycle"></i> Bike Details: {{ bike.firebase_id }}</h1>
         </div>
         <div>
-            <a href="{% url 'bikes:sync_bike' bike.firebase_id %}" class="btn btn-success">
-                <i class="fas fa-sync"></i> Sync Now
-            </a>
+            {% if bike.status == 'ARCHIVED' %}
+                <a href="{% url 'bikes:bike_restore' bike.firebase_id %}" class="btn btn-success me-2">
+                    <i class="fas fa-undo"></i> Restore Bike
+                </a>
+            {% else %}
+                <a href="{% url 'bikes:bike_update' bike.firebase_id %}" class="btn btn-warning me-2">
+                    <i class="fas fa-edit"></i> Edit Bike
+                </a>
+                <a href="{% url 'bikes:sync_bike' bike.firebase_id %}" class="btn btn-success me-2">
+                    <i class="fas fa-sync"></i> Sync Now
+                </a>
+                <a href="{% url 'bikes:bike_delete' bike.firebase_id %}" class="btn btn-warning">
+                    <i class="fas fa-archive"></i> Archive
+                </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -60,8 +72,8 @@
                                 <span class="badge badge-available">Available</span>
                             {% elif bike.status == 'IN_USE' %}
                                 <span class="badge badge-rented">In Use</span>
-                            {% elif bike.status == 'MAINTENANCE' %}
-                                <span class="badge badge-maintenance">Maintenance</span>
+                            {% elif bike.status == 'ARCHIVED' %}
+                                <span class="badge bg-secondary">Archived</span>
                             {% else %}
                                 <span class="badge badge-offline">Offline</span>
                             {% endif %}
@@ -90,9 +102,6 @@
                 <div class="d-grid gap-2">
                     <button class="btn btn-success" onclick="updateStatus('AVAILABLE')">
                         <i class="fas fa-check-circle"></i> Mark as Available
-                    </button>
-                    <button class="btn btn-warning" onclick="updateStatus('MAINTENANCE')">
-                        <i class="fas fa-wrench"></i> Send to Maintenance
                     </button>
                     <button class="btn btn-danger" onclick="updateStatus('OFFLINE')">
                         <i class="fas fa-power-off"></i> Mark as Offline
