@@ -1,5 +1,5 @@
 """
-Geofence Sync Service
+Geofence Sync Service - ARRAY Format Compatible
 Syncs geofence zone data from Firebase to PostgreSQL
 """
 
@@ -28,7 +28,7 @@ class GeofenceSyncService:
             True if successful, False otherwise
         """
         try:
-            # Get zone data from Firebase
+            # Get zone data from Firebase (now returns ARRAY format)
             firebase_data = self.firebase_service.get_zone(zone_id)
             
             if not firebase_data:
@@ -71,7 +71,7 @@ class GeofenceSyncService:
         }
         
         try:
-            # Get all zones from Firebase
+            # Get all zones from Firebase (now returns ARRAY format)
             firebase_zones = self.firebase_service.list_zones(active_only=False)
             stats['total'] = len(firebase_zones)
             
@@ -171,7 +171,7 @@ class GeofenceSyncService:
             # Generate zone ID (or use provided one)
             zone_id = zone_data.get('firebase_id') or zone_data.get('name').lower().replace(' ', '_')
             
-            # Create in Firebase
+            # Create in Firebase (uses ARRAY format)
             success = self.firebase_service.create_zone(zone_id, zone_data)
             
             if success:

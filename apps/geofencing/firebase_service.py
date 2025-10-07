@@ -1,6 +1,7 @@
 """
-Firebase Service for Geofencing
+Firebase Service for Geofencing - ARRAY FORMAT
 Handles all Firebase Firestore operations for geofence zones
+Updated to use ARRAY format for polygon points instead of MAP
 """
 
 from firebase_admin import firestore
@@ -17,6 +18,43 @@ class GeofenceFirebaseService:
     def __init__(self):
         self.db = firestore.client()
         self.collection = self.db.collection('geofence')
+    
+    def _extract_points_from_array(self, points_data: list) -> List[Dict]:
+        """
+        Extract points from ARRAY format
+        
+        Args:
+            points_data: List of point objects from Firebase
+            
+        Returns:
+            List of dictionaries with index, latitude, longitude
+        """
+        points = []
+        
+        if not points_data or not isinstance(points_data, list):
+            return points
+        
+        for index, point_data in enumerate(points_data):
+            try:
+                if 'location' in point_data:
+                    # GeoPoint format
+                    points.append({
+                        'index': index,
+                        'latitude': point_data['location'].latitude,
+                        'longitude': point_data['location'].longitude
+                    })
+                elif 'latitude' in point_data and 'longitude' in point_data:
+                    # Already in lat/lng format
+                    points.append({
+                        'index': index,
+                        'latitude': point_data['latitude'],
+                        'longitude': point_data['longitude']
+                    })
+            except Exception as e:
+                logger.warning(f"Error extracting point at index {index}: {e}")
+                continue
+        
+        return points
     
     def get_zone(self, zone_id: str) -> Optional[Dict]:
         """
@@ -35,19 +73,8 @@ class GeofenceFirebaseService:
             if doc.exists:
                 data = doc.to_dict()
                 
-                # Extract points from nested structure
-                points = []
-                if 'points' in data:
-                    # Sort by key (0, 1, 2, ...)
-                    sorted_points = sorted(data['points'].items(), key=lambda x: int(x[0]))
-                    
-                    for key, point_data in sorted_points:
-                        if 'location' in point_data:
-                            points.append({
-                                'index': int(key),
-                                'latitude': point_data['location'].latitude,
-                                'longitude': point_data['location'].longitude
-                            })
+                # Extract points from ARRAY format
+                points = self._extract_points_from_array(data.get('points', []))
                 
                 # Calculate center point
                 if points:
@@ -87,18 +114,8 @@ class GeofenceFirebaseService:
             for doc in docs:
                 data = doc.to_dict()
                 
-                # Extract points
-                points = []
-                if 'points' in data:
-                    sorted_points = sorted(data['points'].items(), key=lambda x: int(x[0]))
-                    
-                    for key, point_data in sorted_points:
-                        if 'location' in point_data:
-                            points.append({
-                                'index': int(key),
-                                'latitude': point_data['location'].latitude,
-                                'longitude': point_data['location'].longitude
-                            })
+                # Extract points from ARRAY format
+                points = self._extract_points_from_array(data.get('points', []))
                 
                 # Calculate center
                 if points:
@@ -118,12 +135,12 @@ class GeofenceFirebaseService:
     
     def create_zone(self, zone_id: str, zone_data: Dict) -> bool:
         """
-        Create a new geofence zone in Firebase
+        Create a new geofence zone in Firebase using ARRAY format
         
         Args:
             zone_id: Document ID for the zone
             zone_data: Dictionary containing zone information
-                Required: name, points (list of {lat, lng})
+                Required: name, points (list of {latitude, longitude})
                 Optional: color_code, is_active
             
         Returns:
@@ -132,30 +149,30 @@ class GeofenceFirebaseService:
         try:
             doc_ref = self.collection.document(zone_id)
             
-            # Prepare points in Firebase nested structure
-            firebase_points = {}
+            # Prepare points in ARRAY format (list)
+            points_list = []
             points = zone_data.get('points', [])
             
-            for i, point in enumerate(points):
-                firebase_points[str(i)] = {
+            for point in points:
+                points_list.append({
                     'location': firestore.GeoPoint(
                         latitude=float(point['latitude']),
                         longitude=float(point['longitude'])
                     )
-                }
+                })
             
             # Prepare zone data
             data = {
                 'name': zone_data.get('name'),
                 'is_active': zone_data.get('is_active', True),
                 'color_code': zone_data.get('color_code', '#3388ff'),
-                'points': firebase_points,
+                'points': points_list,  # ARRAY format
                 'created_at': firestore.SERVER_TIMESTAMP,
                 'updated_at': firestore.SERVER_TIMESTAMP
             }
             
             doc_ref.set(data)
-            logger.info(f"Created zone {zone_id} in Firebase")
+            logger.info(f"Created zone {zone_id} in Firebase with ARRAY format")
             return True
         except Exception as e:
             logger.error(f"Error creating zone {zone_id}: {e}")
@@ -175,20 +192,20 @@ class GeofenceFirebaseService:
         try:
             doc_ref = self.collection.document(zone_id)
             
-            # Convert points if present
+            # Convert points if present (ARRAY format)
             if 'points' in updates:
-                firebase_points = {}
+                points_list = []
                 points = updates.pop('points')
                 
-                for i, point in enumerate(points):
-                    firebase_points[str(i)] = {
+                for point in points:
+                    points_list.append({
                         'location': firestore.GeoPoint(
                             latitude=float(point['latitude']),
                             longitude=float(point['longitude'])
                         )
-                    }
+                    })
                 
-                updates['points'] = firebase_points
+                updates['points'] = points_list  # ARRAY format
             
             updates['updated_at'] = firestore.SERVER_TIMESTAMP
             doc_ref.update(updates)
@@ -222,7 +239,7 @@ class GeofenceFirebaseService:
     
     def add_point_to_zone(self, zone_id: str, latitude: float, longitude: float) -> bool:
         """
-        Add a new point to an existing zone
+        Add a new point to an existing zone (ARRAY format)
         
         Args:
             zone_id: Firebase document ID
@@ -241,22 +258,19 @@ class GeofenceFirebaseService:
                 return False
             
             data = doc.to_dict()
-            points = data.get('points', {})
+            points = data.get('points', [])
             
-            # Find next index
-            max_index = max([int(k) for k in points.keys()]) if points else -1
-            next_index = str(max_index + 1)
-            
-            # Add new point
-            points[next_index] = {
+            # Append new point to array
+            new_point = {
                 'location': firestore.GeoPoint(
                     latitude=float(latitude),
                     longitude=float(longitude)
                 )
             }
             
+            # Use arrayUnion for atomic append
             doc_ref.update({
-                'points': points,
+                'points': firestore.ArrayUnion([new_point]),
                 'updated_at': firestore.SERVER_TIMESTAMP
             })
             
@@ -268,7 +282,8 @@ class GeofenceFirebaseService:
     
     def remove_point_from_zone(self, zone_id: str, point_index: int) -> bool:
         """
-        Remove a point from a zone
+        Remove a point from a zone (ARRAY format)
+        Note: In array format, we need to read, modify, and write the entire array
         
         Args:
             zone_id: Firebase document ID
@@ -286,26 +301,73 @@ class GeofenceFirebaseService:
                 return False
             
             data = doc.to_dict()
-            points = data.get('points', {})
+            points = data.get('points', [])
+            
+            # Check if index is valid
+            if not (0 <= point_index < len(points)):
+                logger.error(f"Invalid point index {point_index} for zone {zone_id}")
+                return False
             
             # Remove the point
-            if str(point_index) in points:
-                del points[str(point_index)]
-                
-                # Re-index remaining points
-                sorted_points = sorted([(int(k), v) for k, v in points.items()])
-                reindexed_points = {str(i): v for i, (_, v) in enumerate(sorted_points)}
-                
-                doc_ref.update({
-                    'points': reindexed_points,
-                    'updated_at': firestore.SERVER_TIMESTAMP
-                })
-                
-                logger.info(f"Removed point {point_index} from zone {zone_id}")
-                return True
-            else:
-                logger.error(f"Point {point_index} not found in zone {zone_id}")
-                return False
+            points.pop(point_index)
+            
+            # Update with new array
+            doc_ref.update({
+                'points': points,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            logger.info(f"Removed point {point_index} from zone {zone_id}")
+            return True
         except Exception as e:
             logger.error(f"Error removing point from zone {zone_id}: {e}")
+            return False
+    
+    def update_point_in_zone(self, zone_id: str, point_index: int, latitude: float, longitude: float) -> bool:
+        """
+        Update a specific point in a zone (ARRAY format)
+        
+        Args:
+            zone_id: Firebase document ID
+            point_index: Index of point to update
+            latitude: New latitude
+            longitude: New longitude
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            doc_ref = self.collection.document(zone_id)
+            doc = doc_ref.get()
+            
+            if not doc.exists:
+                logger.error(f"Zone {zone_id} not found")
+                return False
+            
+            data = doc.to_dict()
+            points = data.get('points', [])
+            
+            # Check if index is valid
+            if not (0 <= point_index < len(points)):
+                logger.error(f"Invalid point index {point_index} for zone {zone_id}")
+                return False
+            
+            # Update the point
+            points[point_index] = {
+                'location': firestore.GeoPoint(
+                    latitude=float(latitude),
+                    longitude=float(longitude)
+                )
+            }
+            
+            # Update with modified array
+            doc_ref.update({
+                'points': points,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            
+            logger.info(f"Updated point {point_index} in zone {zone_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error updating point in zone {zone_id}: {e}")
             return False
