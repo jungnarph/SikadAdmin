@@ -1,236 +1,146 @@
 {% extends 'base/base.html' %}
+{% load static %}
 
-{% block title %}{{ title }} - Sikad Admin{% endblock %}
+{% block title %}{{ title }} - Geofencing{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
 <style>
-    #zoneDrawMap {
-        height: 500px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-    
-    .drawing-instructions {
-        background: #e7f3ff;
-        border-left: 4px solid #007bff;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    
-    .drawing-instructions ul {
-        margin-bottom: 0;
-        padding-left: 20px;
-    }
-    
-    .polygon-info {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 15px;
-    }
-    
-    .point-counter {
-        font-size: 18px;
-        font-weight: 600;
-        color: #007bff;
-    }
-    
-    .map-controls {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-        background: white;
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    }
-    
-    .coordinates-preview {
+    #map { height: 500px; width: 100%; }
+    .coords-preview {
         max-height: 200px;
         overflow-y: auto;
-        background: #f8f9fa;
+        font-size: 0.85rem;
+        background-color: #f8f9fa;
         padding: 10px;
         border-radius: 4px;
-        font-family: monospace;
-        font-size: 12px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <a href="{% url 'geofencing:zone_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
-                <i class="fas fa-arrow-left"></i> Back to Zones
-            </a>
-            <h1><i class="fas fa-map-marked-alt"></i> {{ title }}</h1>
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'geofencing:zone_list' %}">Geofencing</a></li>
+                    <li class="breadcrumb-item active">{{ title }}</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-draw-polygon me-2"></i>{{ title }}</h2>
         </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-lg-8">
-        <!-- Drawing Map -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-draw-polygon"></i> Draw Zone Boundary</h5>
-            </div>
-            <div class="card-body">
-                
-                <div id="zoneDrawMap"></div>
-                
-                <div class="polygon-info">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <strong>Points Drawn:</strong>
-                            <span class="point-counter" id="pointCount">0</span>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="clearPolygon">
-                                <i class="fas fa-trash"></i> Clear Polygon
-                            </button>
-                        </div>
-                    </div>
-                    
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Map Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i>Draw Zone Boundary</h5>
+                </div>
+                <div class="card-body">
+                    <div id="map"></div>
                     <div class="mt-3">
-                        <label class="form-label"><strong>Coordinates Preview:</strong></label>
-                        <div class="coordinates-preview" id="coordsPreview">
-                            No polygon drawn yet
-                        </div>
+                        <button type="button" id="clearPolygon" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash me-1"></i>Clear Polygon
+                        </button>
+                        <span class="ms-3">
+                            <strong>Points:</strong> <span id="pointCount" class="badge bg-info">0</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coordinates Preview -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Polygon Coordinates</h6>
+                </div>
+                <div class="card-body">
+                    <div id="coordsPreview" class="coords-preview text-muted">
+                        No polygon drawn yet
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-4">
-        <!-- Zone Details Form -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Zone Details</h5>
-            </div>
-            <div class="card-body">
-                <form method="post" id="zoneForm">
-                    {% csrf_token %}
-                    
-                    <!-- Zone ID (only for create) -->
-                    {% if action == 'Create' %}
-                    <div class="mb-3">
-                        <label for="{{ form.zone_id.id_for_label }}" class="form-label">
-                            Zone ID <span class="text-danger">*</span>
-                        </label>
-                        {{ form.zone_id }}
-                        <div class="form-text">{{ form.zone_id.help_text }}</div>
-                        {% if form.zone_id.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.zone_id.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    {% else %}
-                    <div class="alert alert-info">
-                        <strong>Zone ID:</strong> {{ zone_id }}
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Zone Name -->
-                    <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">
-                            Zone Name <span class="text-danger">*</span>
-                        </label>
-                        {{ form.name }}
-                        {% if form.name.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.name.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Color Code -->
-                    <div class="mb-3">
-                        <label for="{{ form.color_code.id_for_label }}" class="form-label">
-                            Zone Color <span class="text-danger">*</span>
-                        </label>
-                        <div class="d-flex gap-2 align-items-center">
-                            {{ form.color_code }}
-                            <span class="form-text">Choose display color</span>
-                        </div>
-                        {% if form.color_code.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.color_code.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- Description (if field exists) -->
-                    {% if form.description %}
-                    <div class="mb-3">
-                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                            Description
-                        </label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.description.errors }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Active Status (only for update) -->
-                    {% if action == 'Update' and form.is_active %}
-                    <div class="mb-3">
-                        <div class="form-check">
-                            {{ form.is_active }}
-                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                                Zone is Active
+        <div class="col-lg-4">
+            <!-- Zone Details Form -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Zone Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="zoneForm">
+                        {% csrf_token %}
+                        
+                        {% if action == 'Create' %}
+                        <div class="mb-3">
+                            <label for="{{ form.zone_id.id_for_label }}" class="form-label">
+                                Zone ID <span class="text-danger">*</span>
                             </label>
+                            {{ form.zone_id }}
+                            <small class="form-text text-muted">{{ form.zone_id.help_text }}</small>
+                            {% if form.zone_id.errors %}
+                                <div class="text-danger">{{ form.zone_id.errors }}</div>
+                            {% endif %}
                         </div>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Hidden field for polygon points -->
-                    {{ form.polygon_points }}
-                    {% if form.polygon_points.errors %}
-                        <div class="alert alert-danger mt-3">
-                            {{ form.polygon_points.errors }}
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">
+                                Zone Name <span class="text-danger">*</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger">{{ form.name.errors }}</div>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Form Actions -->
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-primary" id="submitBtn">
-                            <i class="fas fa-save"></i> {{ action }} Zone
-                        </button>
-                        <a href="{% url 'geofencing:zone_list' %}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Help Card -->
-        <div class="card mt-3">
-            <div class="card-header bg-info text-white">
-                <h6 class="mb-0"><i class="fas fa-question-circle"></i> Tips</h6>
-            </div>
-            <div class="card-body">
-                <ul class="mb-0 small">
-                    <li>Draw the boundary where bikes can be used</li>
-                    <li>Minimum 3 points required for a zone</li>
-                    <li>More points = more accurate boundary</li>
-                    <li>Choose a contrasting color for visibility</li>
-                    <li>Save regularly to avoid losing progress</li>
-                </ul>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.color_code.id_for_label }}" class="form-label">
+                                Zone Color <span class="text-danger">*</span>
+                            </label>
+                            {{ form.color_code }}
+                            <small class="form-text text-muted">{{ form.color_code.help_text }}</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ form.description }}
+                        </div>
+                        
+                        {% if action == 'Update' %}
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Zone is Active
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Hidden field for polygon points -->
+                        {{ form.polygon_points }}
+                        
+                        <hr>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>{{ action }} Zone
+                            </button>
+                            <a href="{% url 'geofencing:zone_list' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -239,10 +149,10 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script>
-    // Initialize map centered on Philippines (Bulacan)
-    const map = L.map('zoneDrawMap').setView([14.8433, 120.8111], 13);
+    // Initialize map centered on Baguio/La Trinidad
+    const map = L.map('map').setView([16.4023, 120.5960], 13);
     
     // Add tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -250,13 +160,12 @@
         maxZoom: 19
     }).addTo(map);
     
-    // Feature group for drawn items
+    // FeatureGroup to store drawn items
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
     
-    // Drawing control
+    // Initialize draw control
     const drawControl = new L.Control.Draw({
-        position: 'topleft',
         draw: {
             polygon: {
                 allowIntersection: false,
@@ -277,7 +186,13 @@
         },
         edit: {
             featureGroup: drawnItems,
-            remove: true
+            remove: true,
+            edit: {
+                selectedPathOptions: {
+                    maintainColor: true,
+                    opacity: 0.8
+                }
+            }
         }
     });
     map.addControl(drawControl);
@@ -313,6 +228,8 @@
             longitude: latlng.lng
         }));
         
+        console.log('Updating polygon data with', points.length, 'points'); // Debug log
+        
         // Update hidden field
         document.getElementById('{{ form.polygon_points.id_for_label }}').value = JSON.stringify(points);
         
@@ -330,6 +247,8 @@
     map.on(L.Draw.Event.CREATED, function(e) {
         const layer = e.layer;
         
+        console.log('Polygon created'); // Debug log
+        
         // Remove old polygon if exists
         if (currentPolygon) {
             drawnItems.removeLayer(currentPolygon);
@@ -346,20 +265,60 @@
         updatePolygonData(layer);
     });
     
-    // When polygon is edited
+    // CRITICAL FIX: When polygon is edited (includes vertex removal/addition/movement)
     map.on(L.Draw.Event.EDITED, function(e) {
+        console.log('Polygon edited'); // Debug log
+        
         const layers = e.layers;
         layers.eachLayer(function(layer) {
+            // Update the current polygon reference
+            currentPolygon = layer;
+            
+            // IMPORTANT: This will capture ALL changes including:
+            // - Moving vertices (dragging points)
+            // - Removing vertices (deleting individual points)
+            // - Adding vertices (middle markers)
             updatePolygonData(layer);
         });
     });
     
-    // When polygon is deleted
+    // When entire polygon is deleted (trash button)
     map.on(L.Draw.Event.DELETED, function(e) {
+        console.log('Polygon deleted'); // Debug log
+        
         currentPolygon = null;
         document.getElementById('{{ form.polygon_points.id_for_label }}').value = '';
         document.getElementById('pointCount').textContent = '0';
         document.getElementById('coordsPreview').innerHTML = 'No polygon drawn yet';
+    });
+    
+    // ADDITIONAL FIX: Listen to editstart and editstop events for better debugging
+    map.on('draw:editstart', function(e) {
+        console.log('Edit mode started');
+    });
+    
+    map.on('draw:editstop', function(e) {
+        console.log('Edit mode stopped');
+        // Force update when edit mode ends
+        if (currentPolygon) {
+            updatePolygonData(currentPolygon);
+        }
+    });
+    
+    // ADDITIONAL FIX: Listen to vertex events
+    map.on('draw:editvertex', function(e) {
+        console.log('Vertex edited');
+        if (currentPolygon) {
+            updatePolygonData(currentPolygon);
+        }
+    });
+    
+    map.on('draw:deletestart', function(e) {
+        console.log('Delete mode started');
+    });
+    
+    map.on('draw:deletestop', function(e) {
+        console.log('Delete mode stopped');
     });
     
     // Clear polygon button
@@ -373,23 +332,31 @@
         }
     });
     
-    // Load existing polygon for edit mode
+    // Load existing polygon for edit mode - Make it properly editable
     {% if action == 'Update' and zone.polygon_points %}
     const existingPoints = {{ zone.polygon_points|safe }};
     if (existingPoints && existingPoints.length > 0) {
+        console.log('Loading existing polygon with', existingPoints.length, 'points'); // Debug log
+        
         const latLngs = existingPoints.map(p => [p.latitude, p.longitude]);
         const color = '{{ zone.color_code }}';
         
+        // Create polygon with editable options
         const polygon = L.polygon(latLngs, {
             color: color,
             fillColor: color,
-            fillOpacity: 0.3
+            fillOpacity: 0.3,
+            weight: 3
         });
         
+        // CRITICAL: Add to drawable layer for editing
         drawnItems.addLayer(polygon);
         currentPolygon = polygon;
+        
+        // Fit map to polygon bounds
         map.fitBounds(polygon.getBounds(), { padding: [50, 50] });
         
+        // Update form with existing data
         updatePolygonData(polygon);
     }
     {% endif %}
@@ -411,6 +378,7 @@
             return false;
         }
         
+        console.log('Form submitted with', points.length, 'points'); // Debug log
         return true;
     });
 </script>
