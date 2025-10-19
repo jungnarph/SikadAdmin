@@ -133,6 +133,11 @@ if FIREBASE_CREDENTIALS_PATH and os.path.exists(FIREBASE_CREDENTIALS_PATH):
 else:
     print("⚠ Firebase credentials not configured")
 
+FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
+FIREBASE_AUTH_DOMAIN = config('FIREBASE_AUTH_DOMAIN', default='')
+FIREBASE_PROJECT_ID = config('FIREBASE_PROJECT_ID', default='')
+FIREBASE_DATABASE_URL = config('FIREBASE_DATABASE_URL', default='https://cit306-finalproject-default-rtdb.firebaseio.com/')
+
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')

@@ -261,8 +261,9 @@ def bike_restore(request, bike_id):
 def bike_map(request):
     """Display live map of all bikes with active geofence zones"""
     from apps.geofencing.models import Zone
+    from django.conf import settings
     
-    # Get all bikes with location data
+    # Get all bikes with location data (for initial load)
     bikes = Bike.objects.filter(
         current_latitude__isnull=False,
         current_longitude__isnull=False
@@ -297,10 +298,20 @@ def bike_map(request):
             'center_longitude': float(zone.center_longitude) if zone.center_longitude else None,
         })
     
+    # Firebase Realtime Database configuration
+    firebase_config = {
+        'databaseURL': 'https://cit306-finalproject-default-rtdb.firebaseio.com/',
+        # You'll need to add these to your settings
+        'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
+        'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
+        'projectId': getattr(settings, 'FIREBASE_PROJECT_ID', ''),
+    }
+    
     context = {
         'bikes_json': json.dumps(bikes_data),
         'zones_json': json.dumps(zones_data),
         'zones': active_zones,  # For template count
+        'firebase_config': json.dumps(firebase_config),
     }
     
     return render(request, 'bikes/bike_map.html', context)

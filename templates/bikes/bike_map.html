@@ -28,6 +28,21 @@
         border: none;
     }
     
+    .realtime-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #28a745;
+        animation: pulse 2s infinite;
+        margin-right: 5px;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+    
     .legend {
         background: white;
         padding: 10px;
@@ -71,7 +86,11 @@
 
 {% block content %}
 <div class="page-header">
-    <h1><i class="fas fa-map-marked-alt"></i> Live Bike Map</h1>
+    <h1>
+        <i class="fas fa-map-marked-alt"></i> Live Bike Map
+        <span class="realtime-indicator"></span>
+        <small class="text-muted" style="font-size: 0.5em;">Real-time</small>
+    </h1>
     <p class="text-muted">Real-time location of all bikes and active geofence zones</p>
 </div>
 
@@ -88,7 +107,7 @@
     <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-muted">Available</small>
+                <small class="text-success">Available</small>
                 <h4 class="mb-0 text-success" id="availableBikes">0</h4>
             </div>
         </div>
@@ -96,7 +115,7 @@
     <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-muted">In Use</small>
+                <small class="text-primary">In Use</small>
                 <h4 class="mb-0 text-primary" id="inUseBikes">0</h4>
             </div>
         </div>
@@ -104,16 +123,24 @@
     <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-muted">Active Zones</small>
-                <h4 class="mb-0 text-info" id="activeZones">{{ zones|length }}</h4>
+                <small class="text-warning">Maintenance</small>
+                <h4 class="mb-0 text-warning" id="maintenanceBikes">0</h4>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-muted">Last Updated</small>
-                <h6 class="mb-0 text-muted" id="lastUpdate">-</h6>
+                <small class="text-danger">Offline</small>
+                <h4 class="mb-0 text-danger" id="offlineBikes">0</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">Last Update</small>
+                <h6 class="mb-0" id="lastUpdate">--:--:--</h6>
             </div>
         </div>
     </div>
@@ -121,57 +148,52 @@
 
 <!-- Map Container -->
 <div class="card">
-    <div class="card-body p-0">
-        <div style="position: relative;">
-            <div id="liveMap"></div>
-            
-            <!-- Map Controls -->
-            <div class="map-controls">
-                <!-- Bike Filters -->
-                <div class="control-section">
-                    <h6><i class="fas fa-bicycle"></i> Bikes</h6>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="showAvailable" checked>
-                        <label class="form-check-label" for="showAvailable">
-                            <span class="text-success">●</span> Available
-                        </label>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="showInUse" checked>
-                        <label class="form-check-label" for="showInUse">
-                            <span class="text-primary">●</span> In Use
-                        </label>
-                    </div>
-                    <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
-                        <label class="form-check-label" for="showMaintenance">
-                            <span class="text-warning">●</span> Maintenance
-                        </label>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="showOffline" checked>
-                        <label class="form-check-label" for="showOffline">
-                            <span class="text-danger">●</span> Offline
-                        </label>
-                    </div>
+    <div class="card-body position-relative">
+        <div id="liveMap"></div>
+        
+        <!-- Map Controls -->
+        <div class="map-controls">
+            <div class="control-section">
+                <h6><i class="fas fa-filter"></i> Filter Bikes</h6>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showAvailable" checked>
+                    <label class="form-check-label" for="showAvailable">
+                        <span style="color: #28a745;">●</span> Available
+                    </label>
                 </div>
-                
-                <!-- Zone Filters -->
-                <div class="control-section">
-                    <h6><i class="fas fa-draw-polygon"></i> Zones</h6>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="showZones" checked>
-                        <label class="form-check-label" for="showZones">
-                            Show Geofence Zones
-                        </label>
-                    </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showInUse" checked>
+                    <label class="form-check-label" for="showInUse">
+                        <span style="color: #007bff;">●</span> In Use
+                    </label>
                 </div>
-                
-                <!-- Refresh Button -->
-                <button class="btn btn-sm btn-primary w-100" onclick="refreshMap()">
-                    <i class="fas fa-sync"></i> Refresh
-                </button>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
+                    <label class="form-check-label" for="showMaintenance">
+                        <span style="color: #ffc107;">●</span> Maintenance
+                    </label>
+                </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showOffline" checked>
+                    <label class="form-check-label" for="showOffline">
+                        <span style="color: #dc3545;">●</span> Offline
+                    </label>
+                </div>
             </div>
+            
+            <div class="control-section">
+                <h6><i class="fas fa-layer-group"></i> Zones</h6>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="showZones" checked>
+                    <label class="form-check-label" for="showZones">
+                        Show Geofence Zones
+                    </label>
+                </div>
+            </div>
+            
+            <button class="btn btn-sm btn-outline-primary w-100" onclick="centerMap()">
+                <i class="fas fa-crosshairs"></i> Center Map
+            </button>
         </div>
     </div>
 </div>
@@ -179,7 +201,22 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Firebase Realtime Database SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
 <script>
+    // Firebase Configuration
+    const firebaseConfig = {{ firebase_config|safe }};
+    
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    
+    const database = firebase.database();
+    
     // Initialize map centered on Philippines (Bulacan)
     const map = L.map('liveMap').setView([14.8433, 120.8111], 13);
     
@@ -192,9 +229,10 @@
     // Store markers and polygons
     let bikeMarkers = {};
     let zonePolygons = {};
+    let realtimeListeners = {};
     
-    // Bike data from Django
-    const bikes = {{ bikes_json|safe }};
+    // Initial bike data from Django (fallback)
+    const initialBikes = {{ bikes_json|safe }};
     
     // Zone data from Django
     const zones = {{ zones_json|safe }};
@@ -205,6 +243,15 @@
         'IN_USE': '#007bff',
         'MAINTENANCE': '#ffc107',
         'OFFLINE': '#dc3545'
+    };
+    
+    // Statistics object
+    let stats = {
+        total: 0,
+        available: 0,
+        inUse: 0,
+        maintenance: 0,
+        offline: 0
     };
     
     // Function to create bike marker
@@ -221,15 +268,145 @@
             .bindPopup(`
                 <div style="min-width: 200px;">
                     <h6><strong>${bike.bike_id}</strong></h6>
-                    <p class="mb-1"><small><strong>Model:</strong> ${bike.bike_model}</small></p>
-                    <p class="mb-1"><small><strong>Type:</strong> ${bike.bike_type}</small></p>
+                    <p class="mb-1"><small><strong>Model:</strong> ${bike.bike_model || 'N/A'}</small></p>
+                    <p class="mb-1"><small><strong>Type:</strong> ${bike.bike_type || 'N/A'}</small></p>
                     <p class="mb-1"><small><strong>Status:</strong> <span class="badge" style="background: ${color};">${bike.status}</span></small></p>
                     ${bike.current_zone_id ? `<p class="mb-1"><small><strong>Zone:</strong> ${bike.current_zone_id}</small></p>` : ''}
+                    ${bike.speed ? `<p class="mb-1"><small><strong>Speed:</strong> ${bike.speed} km/h</small></p>` : ''}
+                    <p class="mb-1"><small><strong>Last Update:</strong> ${new Date().toLocaleTimeString()}</small></p>
                     <a href="/bikes/${bike.bike_id}/" class="btn btn-sm btn-primary mt-2 w-100">View Details</a>
                 </div>
             `);
         
         return marker;
+    }
+    
+    // Function to update bike marker position and status
+    function updateBikeMarker(bikeId, bikeData) {
+        // Remove old marker if exists
+        if (bikeMarkers[bikeId]) {
+            bikeMarkers[bikeId].marker.remove();
+        }
+        
+        // Create and add new marker
+        const marker = createBikeMarker(bikeData);
+        bikeMarkers[bikeId] = {
+            marker: marker,
+            status: bikeData.status,
+            data: bikeData
+        };
+        
+        // Check if marker should be visible based on filters
+        if (shouldShowBike(bikeData.status)) {
+            marker.addTo(map);
+        }
+        
+        updateStatistics();
+    }
+    
+    // Function to remove bike marker
+    function removeBikeMarker(bikeId) {
+        if (bikeMarkers[bikeId]) {
+            bikeMarkers[bikeId].marker.remove();
+            delete bikeMarkers[bikeId];
+            updateStatistics();
+        }
+    }
+    
+    // Function to check if bike should be shown based on filters
+    function shouldShowBike(status) {
+        const showAvailable = document.getElementById('showAvailable').checked;
+        const showInUse = document.getElementById('showInUse').checked;
+        const showMaintenance = document.getElementById('showMaintenance').checked;
+        const showOffline = document.getElementById('showOffline').checked;
+        
+        return (
+            (status === 'AVAILABLE' && showAvailable) ||
+            (status === 'IN_USE' && showInUse) ||
+            (status === 'MAINTENANCE' && showMaintenance) ||
+            (status === 'OFFLINE' && showOffline)
+        );
+    }
+    
+    // Function to update statistics
+    function updateStatistics() {
+        stats = {
+            total: 0,
+            available: 0,
+            inUse: 0,
+            maintenance: 0,
+            offline: 0
+        };
+        
+        Object.values(bikeMarkers).forEach(bikeData => {
+            stats.total++;
+            if (bikeData.status === 'AVAILABLE') stats.available++;
+            else if (bikeData.status === 'IN_USE') stats.inUse++;
+            else if (bikeData.status === 'MAINTENANCE') stats.maintenance++;
+            else if (bikeData.status === 'OFFLINE') stats.offline++;
+        });
+        
+        document.getElementById('totalBikes').textContent = stats.total;
+        document.getElementById('availableBikes').textContent = stats.available;
+        document.getElementById('inUseBikes').textContent = stats.inUse;
+        document.getElementById('maintenanceBikes').textContent = stats.maintenance;
+        document.getElementById('offlineBikes').textContent = stats.offline;
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    }
+    
+    // Function to setup real-time listeners for bikes
+    function setupRealtimeListeners() {
+        const bikesRef = database.ref('bikes');
+        
+        // Listen for new bikes
+        bikesRef.on('child_added', (snapshot) => {
+            const bikeId = snapshot.key;
+            const bikeData = snapshot.val();
+            
+            if (bikeData && bikeData.latitude && bikeData.longitude) {
+                const bike = {
+                    bike_id: bikeId,
+                    bike_model: bikeData.bike_model || 'Unknown',
+                    bike_type: bikeData.bike_type || 'REGULAR',
+                    status: bikeData.status || 'OFFLINE',
+                    latitude: bikeData.latitude,
+                    longitude: bikeData.longitude,
+                    current_zone_id: bikeData.current_zone_id || '',
+                    speed: bikeData.speed || null
+                };
+                
+                updateBikeMarker(bikeId, bike);
+            }
+        });
+        
+        // Listen for bike updates
+        bikesRef.on('child_changed', (snapshot) => {
+            const bikeId = snapshot.key;
+            const bikeData = snapshot.val();
+            
+            if (bikeData && bikeData.latitude && bikeData.longitude) {
+                const bike = {
+                    bike_id: bikeId,
+                    bike_model: bikeData.bike_model || 'Unknown',
+                    bike_type: bikeData.bike_type || 'REGULAR',
+                    status: bikeData.status || 'OFFLINE',
+                    latitude: bikeData.latitude,
+                    longitude: bikeData.longitude,
+                    current_zone_id: bikeData.current_zone_id || '',
+                    speed: bikeData.speed || null
+                };
+                
+                updateBikeMarker(bikeId, bike);
+            }
+        });
+        
+        // Listen for bike removals
+        bikesRef.on('child_removed', (snapshot) => {
+            const bikeId = snapshot.key;
+            removeBikeMarker(bikeId);
+        });
+        
+        console.log('✅ Real-time listeners setup for bikes');
     }
     
     // Function to create zone polygon
@@ -262,65 +439,8 @@
         return polygon;
     }
     
-    // Function to load bikes on map
-    function loadBikes() {
-        // Clear existing markers
-        Object.values(bikeMarkers).forEach(marker => marker.remove());
-        bikeMarkers = {};
-        
-        let stats = {
-            total: 0,
-            available: 0,
-            inUse: 0,
-            maintenance: 0,
-            offline: 0
-        };
-        
-        bikes.forEach(bike => {
-            if (bike.latitude && bike.longitude) {
-                const marker = createBikeMarker(bike);
-                bikeMarkers[bike.bike_id] = {
-                    marker: marker,
-                    status: bike.status
-                };
-                marker.addTo(map);
-                
-                stats.total++;
-                if (bike.status === 'AVAILABLE') stats.available++;
-                else if (bike.status === 'IN_USE') stats.inUse++;
-                else if (bike.status === 'MAINTENANCE') stats.maintenance++;
-                else if (bike.status === 'OFFLINE') stats.offline++;
-            }
-        });
-        
-        // Update statistics
-        document.getElementById('totalBikes').textContent = stats.total;
-        document.getElementById('availableBikes').textContent = stats.available;
-        document.getElementById('inUseBikes').textContent = stats.inUse;
-        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
-        
-        // Fit map to show all markers and zones
-        const allLayers = [
-            ...Object.values(bikeMarkers).map(b => b.marker),
-            ...Object.values(zonePolygons).map(z => z.polygon).filter(p => p !== null)
-        ];
-        
-        if (allLayers.length > 0) {
-            const group = L.featureGroup(allLayers);
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-    }
-    
     // Function to load zones on map
     function loadZones() {
-        // Clear existing polygons
-        Object.values(zonePolygons).forEach(zoneData => {
-            if (zoneData.polygon) {
-                zoneData.polygon.remove();
-            }
-        });
-        zonePolygons = {};
-        
         zones.forEach(zone => {
             const polygon = createZonePolygon(zone);
             if (polygon) {
@@ -335,22 +455,21 @@
         console.log(`Loaded ${Object.keys(zonePolygons).length} active zones`);
     }
     
+    // Function to load initial bikes (fallback)
+    function loadInitialBikes() {
+        initialBikes.forEach(bike => {
+            if (bike.latitude && bike.longitude) {
+                updateBikeMarker(bike.bike_id, bike);
+            }
+        });
+        
+        console.log(`Loaded ${Object.keys(bikeMarkers).length} initial bikes`);
+    }
+    
     // Filter bikes based on checkboxes
     function filterBikes() {
-        const showAvailable = document.getElementById('showAvailable').checked;
-        const showInUse = document.getElementById('showInUse').checked;
-        const showMaintenance = document.getElementById('showMaintenance').checked;
-        const showOffline = document.getElementById('showOffline').checked;
-        
         Object.entries(bikeMarkers).forEach(([bikeId, data]) => {
-            const show = (
-                (data.status === 'AVAILABLE' && showAvailable) ||
-                (data.status === 'IN_USE' && showInUse) ||
-                (data.status === 'MAINTENANCE' && showMaintenance) ||
-                (data.status === 'OFFLINE' && showOffline)
-            );
-            
-            if (show) {
+            if (shouldShowBike(data.status)) {
                 data.marker.addTo(map);
             } else {
                 data.marker.remove();
@@ -373,9 +492,20 @@
         });
     }
     
-    // Refresh map function
-    function refreshMap() {
-        location.reload();
+    // Center map to show all bikes
+    function centerMap() {
+        const allLayers = [
+            ...Object.values(bikeMarkers).map(b => b.marker),
+            ...Object.values(zonePolygons).map(z => z.polygon).filter(p => p !== null)
+        ];
+        
+        if (allLayers.length > 0) {
+            const group = L.featureGroup(allLayers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        } else {
+            // Default to Bulacan if no markers
+            map.setView([14.8433, 120.8111], 13);
+        }
     }
     
     // Add event listeners to checkboxes
@@ -385,11 +515,31 @@
     document.getElementById('showOffline').addEventListener('change', filterBikes);
     document.getElementById('showZones').addEventListener('change', toggleZones);
     
-    // Initial load
-    loadZones();  // Load zones first (background layer)
-    loadBikes();  // Load bikes on top
+    // Initialize the map
+    function initializeMap() {
+        console.log('🗺️ Initializing map...');
+        
+        // Load zones first (background layer)
+        loadZones();
+        
+        // Load initial bikes (fallback data)
+        loadInitialBikes();
+        
+        // Setup real-time listeners
+        setupRealtimeListeners();
+        
+        // Center map after a short delay
+        setTimeout(centerMap, 1000);
+        
+        console.log('✅ Map initialized');
+    }
     
-    // Auto-refresh every 30 seconds
-    setInterval(refreshMap, 30000);
+    // Start when page loads
+    window.addEventListener('load', initializeMap);
+    
+    // Cleanup listeners on page unload
+    window.addEventListener('beforeunload', () => {
+        database.ref('bikes').off();
+    });
 </script>
 {% endblock %}
