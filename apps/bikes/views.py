@@ -259,7 +259,10 @@ def bike_restore(request, bike_id):
 
 @login_required
 def bike_map(request):
-    """Display live map of all bikes"""
+    """Display live map of all bikes with active geofence zones"""
+    from apps.geofencing.models import Zone
+    
+    # Get all bikes with location data
     bikes = Bike.objects.filter(
         current_latitude__isnull=False,
         current_longitude__isnull=False
@@ -275,10 +278,29 @@ def bike_map(request):
             'status': bike.status,
             'latitude': float(bike.current_latitude),
             'longitude': float(bike.current_longitude),
+            'current_zone_id': bike.current_zone_id or '',
+        })
+    
+    # Get all active geofence zones
+    active_zones = Zone.objects.filter(is_active=True)
+    
+    # Prepare zone data for JavaScript
+    zones_data = []
+    for zone in active_zones:
+        zones_data.append({
+            'zone_id': zone.firebase_id,
+            'name': zone.name,
+            'color_code': zone.color_code,
+            'description': zone.description if hasattr(zone, 'description') else '',
+            'polygon_points': zone.polygon_points,
+            'center_latitude': float(zone.center_latitude) if zone.center_latitude else None,
+            'center_longitude': float(zone.center_longitude) if zone.center_longitude else None,
         })
     
     context = {
         'bikes_json': json.dumps(bikes_data),
+        'zones_json': json.dumps(zones_data),
+        'zones': active_zones,  # For template count
     }
     
     return render(request, 'bikes/bike_map.html', context)

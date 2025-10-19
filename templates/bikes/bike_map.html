@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
     #liveMap {
-        height: calc(100vh - 200px);
+        height: 61vh;
         border-radius: 12px;
         box-shadow: 0 2px 12px rgba(0,0,0,0.1);
     }
@@ -20,6 +20,7 @@
         padding: 15px;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        max-width: 250px;
     }
     
     .bike-marker {
@@ -46,18 +47,37 @@
         border-radius: 4px;
         margin-right: 8px;
     }
+    
+    .control-section {
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .control-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .control-section h6 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #495057;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
     <h1><i class="fas fa-map-marked-alt"></i> Live Bike Map</h1>
-    <p class="text-muted">Real-time location of all bikes in the system</p>
+    <p class="text-muted">Real-time location of all bikes and active geofence zones</p>
 </div>
 
 <!-- Statistics Bar -->
 <div class="row mb-3">
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
                 <small class="text-muted">Total on Map</small>
@@ -65,7 +85,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
                 <small class="text-muted">Available</small>
@@ -73,7 +93,7 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
                 <small class="text-muted">In Use</small>
@@ -81,7 +101,15 @@
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
+        <div class="card">
+            <div class="card-body py-2">
+                <small class="text-muted">Active Zones</small>
+                <h4 class="mb-0 text-info" id="activeZones">{{ zones|length }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
         <div class="card">
             <div class="card-body py-2">
                 <small class="text-muted">Last Updated</small>
@@ -99,31 +127,47 @@
             
             <!-- Map Controls -->
             <div class="map-controls">
-                <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" id="showAvailable" checked>
-                    <label class="form-check-label" for="showAvailable">
-                        <span class="text-success">●</span> Available
-                    </label>
+                <!-- Bike Filters -->
+                <div class="control-section">
+                    <h6><i class="fas fa-bicycle"></i> Bikes</h6>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="showAvailable" checked>
+                        <label class="form-check-label" for="showAvailable">
+                            <span class="text-success">●</span> Available
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="showInUse" checked>
+                        <label class="form-check-label" for="showInUse">
+                            <span class="text-primary">●</span> In Use
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
+                        <label class="form-check-label" for="showMaintenance">
+                            <span class="text-warning">●</span> Maintenance
+                        </label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="showOffline" checked>
+                        <label class="form-check-label" for="showOffline">
+                            <span class="text-danger">●</span> Offline
+                        </label>
+                    </div>
                 </div>
-                <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" id="showInUse" checked>
-                    <label class="form-check-label" for="showInUse">
-                        <span class="text-primary">●</span> In Use
-                    </label>
+                
+                <!-- Zone Filters -->
+                <div class="control-section">
+                    <h6><i class="fas fa-draw-polygon"></i> Zones</h6>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="showZones" checked>
+                        <label class="form-check-label" for="showZones">
+                            Show Geofence Zones
+                        </label>
+                    </div>
                 </div>
-                <div class="form-check form-switch mb-2">
-                    <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
-                    <label class="form-check-label" for="showMaintenance">
-                        <span class="text-warning">●</span> Maintenance
-                    </label>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showOffline" checked>
-                    <label class="form-check-label" for="showOffline">
-                        <span class="text-danger">●</span> Offline
-                    </label>
-                </div>
-                <hr>
+                
+                <!-- Refresh Button -->
                 <button class="btn btn-sm btn-primary w-100" onclick="refreshMap()">
                     <i class="fas fa-sync"></i> Refresh
                 </button>
@@ -145,11 +189,15 @@
         maxZoom: 19
     }).addTo(map);
     
-    // Store markers
+    // Store markers and polygons
     let bikeMarkers = {};
+    let zonePolygons = {};
     
-    // Bike data from Django (you'll need to pass this from view)
+    // Bike data from Django
     const bikes = {{ bikes_json|safe }};
+    
+    // Zone data from Django
+    const zones = {{ zones_json|safe }};
     
     // Color mapping for bike status
     const statusColors = {
@@ -176,11 +224,42 @@
                     <p class="mb-1"><small><strong>Model:</strong> ${bike.bike_model}</small></p>
                     <p class="mb-1"><small><strong>Type:</strong> ${bike.bike_type}</small></p>
                     <p class="mb-1"><small><strong>Status:</strong> <span class="badge" style="background: ${color};">${bike.status}</span></small></p>
+                    ${bike.current_zone_id ? `<p class="mb-1"><small><strong>Zone:</strong> ${bike.current_zone_id}</small></p>` : ''}
                     <a href="/bikes/${bike.bike_id}/" class="btn btn-sm btn-primary mt-2 w-100">View Details</a>
                 </div>
             `);
         
         return marker;
+    }
+    
+    // Function to create zone polygon
+    function createZonePolygon(zone) {
+        if (!zone.polygon_points || zone.polygon_points.length < 3) {
+            return null;
+        }
+        
+        const latLngs = zone.polygon_points.map(p => [p.latitude, p.longitude]);
+        
+        const polygon = L.polygon(latLngs, {
+            color: zone.color_code,
+            fillColor: zone.color_code,
+            fillOpacity: 0.2,
+            weight: 2,
+            opacity: 0.8
+        });
+        
+        polygon.bindPopup(`
+            <div style="min-width: 200px;">
+                <h6><strong>${zone.name}</strong></h6>
+                <p class="mb-1"><small><strong>Zone ID:</strong> ${zone.zone_id}</small></p>
+                <p class="mb-1"><small><strong>Points:</strong> ${zone.polygon_points.length} vertices</small></p>
+                <p class="mb-1"><small><strong>Status:</strong> <span class="badge bg-success">Active</span></small></p>
+                ${zone.description ? `<p class="mb-1"><small>${zone.description}</small></p>` : ''}
+                <a href="/geofencing/${zone.zone_id}/" class="btn btn-sm btn-info mt-2 w-100">View Zone</a>
+            </div>
+        `);
+        
+        return polygon;
     }
     
     // Function to load bikes on map
@@ -220,11 +299,40 @@
         document.getElementById('inUseBikes').textContent = stats.inUse;
         document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
         
-        // Fit map to show all markers
-        if (stats.total > 0) {
-            const group = L.featureGroup(Object.values(bikeMarkers).map(b => b.marker));
+        // Fit map to show all markers and zones
+        const allLayers = [
+            ...Object.values(bikeMarkers).map(b => b.marker),
+            ...Object.values(zonePolygons).map(z => z.polygon).filter(p => p !== null)
+        ];
+        
+        if (allLayers.length > 0) {
+            const group = L.featureGroup(allLayers);
             map.fitBounds(group.getBounds().pad(0.1));
         }
+    }
+    
+    // Function to load zones on map
+    function loadZones() {
+        // Clear existing polygons
+        Object.values(zonePolygons).forEach(zoneData => {
+            if (zoneData.polygon) {
+                zoneData.polygon.remove();
+            }
+        });
+        zonePolygons = {};
+        
+        zones.forEach(zone => {
+            const polygon = createZonePolygon(zone);
+            if (polygon) {
+                zonePolygons[zone.zone_id] = {
+                    polygon: polygon,
+                    zone: zone
+                };
+                polygon.addTo(map);
+            }
+        });
+        
+        console.log(`Loaded ${Object.keys(zonePolygons).length} active zones`);
     }
     
     // Filter bikes based on checkboxes
@@ -250,6 +358,21 @@
         });
     }
     
+    // Toggle zones visibility
+    function toggleZones() {
+        const showZones = document.getElementById('showZones').checked;
+        
+        Object.values(zonePolygons).forEach(zoneData => {
+            if (zoneData.polygon) {
+                if (showZones) {
+                    zoneData.polygon.addTo(map);
+                } else {
+                    zoneData.polygon.remove();
+                }
+            }
+        });
+    }
+    
     // Refresh map function
     function refreshMap() {
         location.reload();
@@ -260,9 +383,11 @@
     document.getElementById('showInUse').addEventListener('change', filterBikes);
     document.getElementById('showMaintenance').addEventListener('change', filterBikes);
     document.getElementById('showOffline').addEventListener('change', filterBikes);
+    document.getElementById('showZones').addEventListener('change', toggleZones);
     
     // Initial load
-    loadBikes();
+    loadZones();  // Load zones first (background layer)
+    loadBikes();  // Load bikes on top
     
     // Auto-refresh every 30 seconds
     setInterval(refreshMap, 30000);
