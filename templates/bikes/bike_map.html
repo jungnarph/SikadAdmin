@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
     #liveMap {
-        height: 61vh;
+        height: 57vh;
         border-radius: 12px;
         box-shadow: 0 2px 12px rgba(0,0,0,0.1);
     }
@@ -123,14 +123,6 @@
     <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-warning">Maintenance</small>
-                <h4 class="mb-0 text-warning" id="maintenanceBikes">0</h4>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card">
-            <div class="card-body py-2">
                 <small class="text-danger">Offline</small>
                 <h4 class="mb-0 text-danger" id="offlineBikes">0</h4>
             </div>
@@ -165,12 +157,6 @@
                     <input class="form-check-input" type="checkbox" id="showInUse" checked>
                     <label class="form-check-label" for="showInUse">
                         <span style="color: #007bff;">●</span> In Use
-                    </label>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showMaintenance" checked>
-                    <label class="form-check-label" for="showMaintenance">
-                        <span style="color: #ffc107;">●</span> Maintenance
                     </label>
                 </div>
                 <div class="form-check form-switch">
@@ -241,7 +227,6 @@
     const statusColors = {
         'AVAILABLE': '#28a745',
         'IN_USE': '#007bff',
-        'MAINTENANCE': '#ffc107',
         'OFFLINE': '#dc3545'
     };
     
@@ -250,7 +235,6 @@
         total: 0,
         available: 0,
         inUse: 0,
-        maintenance: 0,
         offline: 0
     };
     
@@ -317,13 +301,11 @@
     function shouldShowBike(status) {
         const showAvailable = document.getElementById('showAvailable').checked;
         const showInUse = document.getElementById('showInUse').checked;
-        const showMaintenance = document.getElementById('showMaintenance').checked;
         const showOffline = document.getElementById('showOffline').checked;
         
         return (
             (status === 'AVAILABLE' && showAvailable) ||
             (status === 'IN_USE' && showInUse) ||
-            (status === 'MAINTENANCE' && showMaintenance) ||
             (status === 'OFFLINE' && showOffline)
         );
     }
@@ -334,7 +316,6 @@
             total: 0,
             available: 0,
             inUse: 0,
-            maintenance: 0,
             offline: 0
         };
         
@@ -342,14 +323,12 @@
             stats.total++;
             if (bikeData.status === 'AVAILABLE') stats.available++;
             else if (bikeData.status === 'IN_USE') stats.inUse++;
-            else if (bikeData.status === 'MAINTENANCE') stats.maintenance++;
             else if (bikeData.status === 'OFFLINE') stats.offline++;
         });
         
         document.getElementById('totalBikes').textContent = stats.total;
         document.getElementById('availableBikes').textContent = stats.available;
         document.getElementById('inUseBikes').textContent = stats.inUse;
-        document.getElementById('maintenanceBikes').textContent = stats.maintenance;
         document.getElementById('offlineBikes').textContent = stats.offline;
         document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
     }
@@ -511,7 +490,6 @@
     // Add event listeners to checkboxes
     document.getElementById('showAvailable').addEventListener('change', filterBikes);
     document.getElementById('showInUse').addEventListener('change', filterBikes);
-    document.getElementById('showMaintenance').addEventListener('change', filterBikes);
     document.getElementById('showOffline').addEventListener('change', filterBikes);
     document.getElementById('showZones').addEventListener('change', toggleZones);
     
