@@ -175,8 +175,8 @@ class CustomerFirebaseService:
         """
         try:
             rides_ref = self.db.collection('ride_logs')
-            query = rides_ref.where('customer_id', '==', customer_id)\
-                             .order_by('start_time', direction=firestore.Query.DESCENDING)\
+            query = rides_ref.where('userId', '==', customer_id)\
+                             .order_by('endTime', direction=firestore.Query.DESCENDING)\
                              .limit(limit)
             
             docs = query.stream()

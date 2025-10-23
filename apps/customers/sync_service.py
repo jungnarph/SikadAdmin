@@ -69,12 +69,13 @@ class CustomerSyncService:
             logger.error(f"Error syncing customer {customer_id}: {e}")
             return False
     
-    def sync_all_customers(self, limit: int = 1000) -> dict:
+    def sync_all_customers(self, limit: int = 1000, ride_limit_per_customer: int = 100) -> dict:
         """
         Sync all customers from Firebase to PostgreSQL
         
         Args:
             limit: Maximum number of customers to sync
+            ride_limit_per_customer: Maximum number of rides to sync for each customer
             
         Returns:
             Dictionary with sync statistics
@@ -83,7 +84,8 @@ class CustomerSyncService:
             'total': 0,
             'created': 0,
             'updated': 0,
-            'failed': 0
+            'failed': 0,
+            'rides_synced': 0
         }
         
         try:
@@ -92,6 +94,7 @@ class CustomerSyncService:
             stats['total'] = len(firebase_customers)
             
             for customer_data in firebase_customers:
+                customer_id = None # Define outside try block for error logging
                 try:
                     customer_id = customer_data['firebase_id']
                     
@@ -111,6 +114,24 @@ class CustomerSyncService:
                             'suspension_reason': customer_data.get('suspension_reason', ''),
                         }
                     )
+
+                    # --- MODIFICATION START ---
+
+                    # Also sync customer statistics (mirroring sync_single_customer logic)
+                    fb_stats = self.firebase_service.get_customer_statistics(customer_id)
+                    if fb_stats:
+                        customer.total_rides = fb_stats.get('total_rides', 0)
+                        customer.total_spent = fb_stats.get('total_spent', 0)
+                        customer.save()
+
+                    # Sync customer's ride logs as requested
+                    synced_ride_count = self.sync_customer_rides(
+                        customer_id, 
+                        limit=ride_limit_per_customer
+                    )
+                    stats['rides_synced'] += synced_ride_count
+                    
+                    # --- MODIFICATION END ---
                     
                     if created:
                         stats['created'] += 1
@@ -118,7 +139,7 @@ class CustomerSyncService:
                         stats['updated'] += 1
                         
                 except Exception as e:
-                    logger.error(f"Error syncing customer: {e}")
+                    logger.error(f"Error syncing customer {customer_id}: {e}")
                     stats['failed'] += 1
             
             logger.info(f"Customer sync completed: {stats}")
@@ -144,7 +165,9 @@ class CustomerSyncService:
             customer = Customer.objects.filter(firebase_id=customer_id).first()
             if not customer:
                 logger.warning(f"Customer {customer_id} not found in PostgreSQL, syncing first")
-                self.sync_single_customer(customer_id)
+                if not self.sync_single_customer(customer_id):
+                     logger.error(f"Failed to sync prerequisite customer {customer_id} for ride sync.")
+                     return 0
                 customer = Customer.objects.get(firebase_id=customer_id)
             
             # Get ride history from Firebase
@@ -176,9 +199,10 @@ class CustomerSyncService:
                     )
                     synced_count += 1
                 except Exception as e:
-                    logger.error(f"Error syncing ride record: {e}")
+                    logger.error(f"Error syncing ride record {ride.get('firebase_id')}: {e}")
             
-            logger.info(f"Synced {synced_count} rides for customer {customer_id}")
+            if synced_count > 0:
+                logger.info(f"Synced {synced_count} rides for customer {customer_id}")
             return synced_count
             
         except Exception as e:
