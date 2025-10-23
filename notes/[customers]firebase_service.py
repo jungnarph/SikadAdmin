@@ -16,7 +16,7 @@ class CustomerFirebaseService:
     
     def __init__(self):
         self.db = firestore.client()
-        self.collection = self.db.collection('users')
+        self.collection = self.db.collection('customers')
     
     def get_customer(self, customer_id: str) -> Optional[Dict]:
         """
@@ -174,7 +174,7 @@ class CustomerFirebaseService:
             List of ride dictionaries
         """
         try:
-            rides_ref = self.db.collection('ride_logs')
+            rides_ref = self.db.collection('rentals')
             query = rides_ref.where('customer_id', '==', customer_id)\
                              .order_by('start_time', direction=firestore.Query.DESCENDING)\
                              .limit(limit)
