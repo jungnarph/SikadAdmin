@@ -48,3 +48,17 @@ class AdminProfileForm(forms.ModelForm):
                 'placeholder': '+63 XXX XXX XXXX'
             }),
         }
+
+
+class PasswordResetRequestForm(forms.Form):
+    """Form for requesting password reset"""
+    email = forms.EmailField(
+        label='Email Address',
+        max_length=254,
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter your email address',
+            'autofocus': True
+        }),
+        help_text='Enter the email address associated with your account.'
+    )

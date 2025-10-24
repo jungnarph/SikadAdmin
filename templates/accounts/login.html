@@ -112,6 +112,21 @@
         .admin-note i {
             color: #28a745;
         }
+
+                .forgot-password-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .forgot-password-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .forgot-password-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -166,6 +181,13 @@
                         <i class="fas fa-sign-in-alt"></i> Sign In
                     </button>
                 </form>
+
+                <!-- Forgot Password Link -->
+                <div class="forgot-password-link">
+                    <a href="{% url 'accounts:password_reset' %}">
+                        <i class="fas fa-key"></i> Forgot Password?
+                    </a>
+                </div>
                 
                 <div class="admin-note">
                     <p class="mb-0 small">

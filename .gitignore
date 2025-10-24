@@ -185,3 +185,5 @@ serviceAccountKey.json
 
 serviceAccountKeys/
 .serviceAccountKeys/
+
+staticfiles/
