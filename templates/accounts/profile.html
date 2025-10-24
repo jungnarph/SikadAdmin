@@ -8,9 +8,19 @@
     <p class="text-muted">Manage your account settings</p>
 </div>
 
+{# Display messages #}
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+
 <div class="row">
     <div class="col-lg-4">
-        <!-- Profile Card -->
         <div class="card">
             <div class="card-body text-center">
                 <div class="mb-3">
@@ -42,7 +52,6 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
         <div class="card mt-3">
             <div class="card-header">
                 <h5 class="mb-0">Quick Actions</h5>
@@ -61,109 +70,112 @@
     </div>
 
     <div class="col-lg-8">
-        <!-- Edit Profile Form -->
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Edit Profile</h5>
+                <h5 class="mb-0">Edit Profile Information</h5>
             </div>
             <div class="card-body">
+                 {# Use profile_form variable as defined in the updated view #}
                 <form method="post">
                     {% csrf_token %}
-                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                                First Name
-                            </label>
-                            {{ form.first_name }}
-                            {% if form.first_name.errors %}
-                                <div class="text-danger mt-1">
-                                    {{ form.first_name.errors }}
-                                </div>
-                            {% endif %}
+                            <label for="{{ profile_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            {{ profile_form.first_name }}
+                            {% if profile_form.first_name.errors %}<div class="text-danger mt-1">{{ profile_form.first_name.errors }}</div>{% endif %}
                         </div>
-                        
                         <div class="col-md-6 mb-3">
-                            <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                                Last Name
-                            </label>
-                            {{ form.last_name }}
-                            {% if form.last_name.errors %}
-                                <div class="text-danger mt-1">
-                                    {{ form.last_name.errors }}
-                                </div>
-                            {% endif %}
+                            <label for="{{ profile_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            {{ profile_form.last_name }}
+                            {% if profile_form.last_name.errors %}<div class="text-danger mt-1">{{ profile_form.last_name.errors }}</div>{% endif %}
                         </div>
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
-                            Email Address
-                        </label>
-                        {{ form.email }}
-                        {% if form.email.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.email.errors }}
-                            </div>
-                        {% endif %}
+                        <label for="{{ profile_form.email.id_for_label }}" class="form-label">Email Address</label>
+                        {{ profile_form.email }}
+                        {% if profile_form.email.errors %}<div class="text-danger mt-1">{{ profile_form.email.errors }}</div>{% endif %}
                     </div>
-                    
                     <div class="mb-3">
-                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
-                            Phone Number
-                        </label>
-                        {{ form.phone_number }}
-                        {% if form.phone_number.errors %}
-                            <div class="text-danger mt-1">
-                                {{ form.phone_number.errors }}
-                            </div>
-                        {% endif %}
-                        <div class="form-text">
-                            Format: +63 XXX XXX XXXX
-                        </div>
+                        <label for="{{ profile_form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                        {{ profile_form.phone_number }}
+                        {% if profile_form.phone_number.errors %}<div class="text-danger mt-1">{{ profile_form.phone_number.errors }}</div>{% endif %}
+                        <div class="form-text">Format: +63 XXX XXX XXXX</div>
                     </div>
-                    
                     <hr>
-                    
                     <div class="d-flex justify-content-end gap-2">
-                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                            <i class="fas fa-times"></i> Cancel
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Changes
-                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+                         {# Add name="update_profile" to the submit button #}
+                        <button type="submit" name="update_profile" class="btn btn-primary"><i class="fas fa-save"></i> Save Profile Changes</button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Account Information -->
+         <div class="card mt-4">
+             <div class="card-header">
+                 <h5 class="mb-0"><i class="fas fa-shield-alt"></i> Multi-Factor Authentication</h5>
+             </div>
+             <div class="card-body">
+                  {# Use mfa_form variable as defined in the updated view #}
+                 <form method="post">
+                     {% csrf_token %}
+                     <div class="mb-3">
+                         <div class="form-check form-switch form-switch-lg"> {# Added form-switch-lg #}
+                             {{ mfa_form.enable_mfa }}
+                             <label class="form-check-label" for="{{ mfa_form.enable_mfa.id_for_label }}">
+                                 <strong>{{ mfa_form.enable_mfa.label }}</strong>
+                             </label>
+                         </div>
+                         {% if mfa_form.enable_mfa.errors %}
+                             <div class="text-danger mt-1 small">{{ mfa_form.enable_mfa.errors }}</div>
+                         {% endif %}
+                         <div class="form-text mt-2">
+                             When enabled, a verification code will be sent to your email address (<strong>{{ user.email|default:"not set" }}</strong>) each time you log in after entering your password.
+                         </div>
+                         {# Conditional warning if email is not set #}
+                         {% if not user.email %}
+                         <div class="alert alert-warning mt-3 p-2 small">
+                             <i class="fas fa-exclamation-triangle me-1"></i> You must add and verify an email address to your profile before enabling MFA.
+                         </div>
+                         {% endif %}
+                     </div>
+                     <div class="d-flex justify-content-end">
+                          {# Add name="update_mfa" to the submit button. Disable if no email and MFA is currently off #}
+                         <button type="submit" name="update_mfa" class="btn btn-primary" {% if not user.email and not user.is_mfa_enabled %}disabled{% endif %}>
+                             <i class="fas fa-save"></i> Save MFA Setting
+                         </button>
+                     </div>
+                 </form>
+             </div>
+         </div>
+
+
         <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">Account Information</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Username</label>
-                        <p class="mb-0"><strong>{{ user.username }}</strong></p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Role</label>
-                        <p class="mb-0">
-                            <span class="badge bg-success">{{ user.get_role_display }}</span>
-                        </p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Account Created</label>
-                        <p class="mb-0">{{ user.date_joined|date:"F d, Y" }}</p>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label text-muted">Last Login</label>
-                        <p class="mb-0">{{ user.last_login|date:"F d, Y - H:i" }}</p>
-                    </div>
-                </div>
-            </div>
+             <div class="card-header">
+                 <h5 class="mb-0">Account Information</h5>
+             </div>
+             <div class="card-body">
+                 <div class="row">
+                     <div class="col-md-6 mb-3">
+                         <label class="form-label text-muted">Username</label>
+                         <p class="mb-0"><strong>{{ user.username }}</strong></p>
+                     </div>
+                     <div class="col-md-6 mb-3">
+                         <label class="form-label text-muted">Role</label>
+                         <p class="mb-0">
+                             <span class="badge bg-success">{{ user.get_role_display }}</span>
+                         </p>
+                     </div>
+                     <div class="col-md-6 mb-3">
+                         <label class="form-label text-muted">Account Created</label>
+                         <p class="mb-0">{{ user.date_joined|date:"F d, Y" }}</p>
+                     </div>
+                     <div class="col-md-6 mb-3">
+                         <label class="form-label text-muted">Last Login</label>
+                         <p class="mb-0">{{ user.last_login|date:"F d, Y - H:i" }}</p>
+                     </div>
+                 </div>
+             </div>
         </div>
     </div>
 </div>

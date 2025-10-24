@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Verification Code</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table cellpadding="0" cellspacing="0" border="0" width="600" style="background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1e7e34 0%, #155d27 100%); padding: 40px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px;">
+                                <span style="font-size: 36px;">🛡️</span><br>
+                                Login Verification Code
+                            </h1>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 40px 30px;">
+                            <p style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 20px;">
+                                Hello <strong>{{ user.first_name|default:user.username }}</strong>,
+                            </p>
+
+                            <p style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 25px;">
+                                Please use the following verification code to complete your login for the <strong>{{ site_name }}</strong>:
+                            </p>
+
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 20px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <div style="display: inline-block; padding: 15px 40px; background-color: #f0f2f5; border: 1px dashed #ced4da; border-radius: 5px; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #2c3e50;">
+                                            {{ code }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="font-size: 14px; color: #666; line-height: 1.6; margin-top: 25px; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                                <strong>⚠️ Security Note:</strong><br>
+                                This code will expire in 5 minutes. If you did not attempt to log in, please ignore this email or contact your system administrator immediately. Do not share this code with anyone.
+                            </p>
+
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e0e0e0;">
+                            <p style="margin: 0; font-size: 14px; color: #666;">
+                                {{ site_name }}<br>
+                                Bike Sharing Management System
+                            </p>
+                            <p style="margin: 10px 0 0 0; font-size: 12px; color: #999;">
+                                This is an automated email. Please do not reply to this message.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

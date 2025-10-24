@@ -62,3 +62,35 @@ class PasswordResetRequestForm(forms.Form):
         }),
         help_text='Enter the email address associated with your account.'
     )
+
+
+class MfaVerifyForm(forms.Form):
+    """Form for verifying the MFA code entered by the user."""
+    code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control form-control-lg text-center', # Style for emphasis
+            'placeholder': 'Enter 6-digit code',
+            'autofocus': True,
+            'inputmode': 'numeric', # Hint for numeric keyboard on mobile
+            'pattern': '[0-9]*',    # Basic pattern validation
+        }),
+        label="Verification Code",
+        help_text="Enter the 6-digit code sent to your email."
+    )
+
+    def clean_code(self):
+        """Ensure the code contains only digits."""
+        code = self.cleaned_data.get('code')
+        if code and not code.isdigit():
+            raise forms.ValidationError("Verification code must contain only digits.")
+        return code
+
+class MfaEnableDisableForm(forms.Form):
+    """Simple form used on the profile page to toggle MFA status."""
+    enable_mfa = forms.BooleanField(
+        required=False, # Allows unchecking to disable
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        label="Enable Multi-Factor Authentication via Email"
+    )

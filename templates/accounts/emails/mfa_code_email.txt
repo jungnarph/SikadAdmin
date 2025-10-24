@@ -1,0 +1,17 @@
+Login Verification Code - {{ site_name }}
+
+Hello {{ user.first_name|default:user.username }},
+
+Please use the following verification code to complete your login for the {{ site_name }}:
+
+{{ code }}
+
+---
+Security Note:
+This code will expire in 5 minutes. If you did not attempt to log in, please ignore this email or contact your system administrator immediately. Do not share this code with anyone.
+---
+
+{{ site_name }}
+Bike Sharing Management System
+
+This is an automated email. Please do not reply.

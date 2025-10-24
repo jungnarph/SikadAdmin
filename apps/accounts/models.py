@@ -5,6 +5,10 @@ Admin User Models - Stored in PostgreSQL
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
+import random # Add import
+import string # Add import
+from django.utils import timezone # Add import
+from datetime import timedelta # Add import
 
 
 class AdminUser(AbstractUser):
@@ -28,6 +32,10 @@ class AdminUser(AbstractUser):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    is_mfa_enabled = models.BooleanField(default=False, help_text="Designates whether the user has MFA enabled.")
+    mfa_email_code = models.CharField(max_length=6, blank=True, null=True, help_text="Temporary code sent via email.")
+    mfa_code_expiry = models.DateTimeField(blank=True, null=True, help_text="Expiry time for the MFA code.")
     
     class Meta:
         db_table = 'admin_users'
@@ -40,6 +48,37 @@ class AdminUser(AbstractUser):
     @property
     def full_name(self):
         return f"{self.first_name} {self.last_name}".strip() or self.username
+    
+    def generate_mfa_code(self):
+        """Generates a 6-digit code, saves it with expiry, and returns it."""
+        code = "".join(random.choices(string.digits, k=6))
+        self.mfa_email_code = code
+        # Set expiry (e.g., 5 minutes from now)
+        self.mfa_code_expiry = timezone.now() + timedelta(minutes=5)
+        self.save(update_fields=['mfa_email_code', 'mfa_code_expiry'])
+        return code
+
+    def verify_mfa_code(self, submitted_code):
+        """Verifies the submitted MFA code against the stored one and checks expiry."""
+        if not self.mfa_email_code or not self.mfa_code_expiry:
+            return False # No code generated or already used/expired in a previous check
+
+        if timezone.now() > self.mfa_code_expiry:
+            # Code expired, clear it
+            self.mfa_email_code = None
+            self.mfa_code_expiry = None
+            self.save(update_fields=['mfa_email_code', 'mfa_code_expiry'])
+            return False # Indicate code expired
+
+        is_valid = (submitted_code == self.mfa_email_code)
+
+        if is_valid:
+            # Code is valid, clear it immediately to prevent reuse
+            self.mfa_email_code = None
+            self.mfa_code_expiry = None
+            self.save(update_fields=['mfa_email_code', 'mfa_code_expiry'])
+
+        return is_valid
 
 
 class Role(models.Model):

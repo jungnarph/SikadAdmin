@@ -11,6 +11,7 @@ urlpatterns = [
     # Authentication
     path('login/', views.admin_login, name='login'),
     path('logout/', views.admin_logout, name='logout'),
+    path('login/verify/', views.mfa_verify, name='mfa_verify'),
     
     # Profile Management
     path('profile/', views.profile, name='profile'),
