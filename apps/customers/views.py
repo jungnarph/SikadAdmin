@@ -36,7 +36,7 @@ def customer_list(request):
         customers = customers.filter(
             Q(email__icontains=search) |
             Q(phone_number__icontains=search) |
-            Q(full_name__icontains=search) |
+            Q(name__icontains=search) |
             Q(firebase_id__icontains=search)
         )
     
@@ -118,7 +118,7 @@ def customer_edit(request, customer_id):
         if form.is_valid():
             # Prepare update data
             updates = {
-                'full_name': form.cleaned_data['full_name'],
+                'name': form.cleaned_data['name'],
                 'email': form.cleaned_data['email'],
                 'phone_number': form.cleaned_data['phone_number'],
             }
@@ -140,7 +140,7 @@ def customer_edit(request, customer_id):
     else:
         # Pre-fill form with existing data
         initial_data = {
-            'full_name': customer_data.get('full_name', ''),
+            'name': customer_data.get('name', ''),
             'email': customer_data.get('email', ''),
             'phone_number': customer_data.get('phone_number', ''),
         }
@@ -400,7 +400,7 @@ def customer_export(request):
     for customer in customers:
         writer.writerow([
             customer.firebase_id,
-            customer.full_name,
+            customer.name,
             customer.email,
             customer.phone_number,
             customer.status,

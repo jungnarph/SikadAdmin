@@ -8,7 +8,7 @@ from django import forms
 class CustomerEditForm(forms.Form):
     """Form for editing customer information"""
     
-    full_name = forms.CharField(
+    name = forms.CharField(
         max_length=255,
         required=False,
         widget=forms.TextInput(attrs={

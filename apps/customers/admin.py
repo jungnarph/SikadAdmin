@@ -8,12 +8,11 @@ from .models import (
     CustomerActivityLog, CustomerStatistics
 )
 
-
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
     list_display = [
         'firebase_id',
-        'full_name',
+        'name',
         'email',
         'phone_number',
         'status',
@@ -22,8 +21,8 @@ class CustomerAdmin(admin.ModelAdmin):
         'total_spent',
         'registration_date'
     ]
-    list_filter = ['status', 'verification_status', 'email_verified', 'phone_verified', 'registration_date']
-    search_fields = ['firebase_id', 'email', 'phone_number', 'full_name']
+    list_filter = ['status', 'verification_status', 'phone_verified', 'registration_date']
+    search_fields = ['firebase_id', 'email', 'phone_number', 'name']
     readonly_fields = [
         'firebase_id', 'registration_date', 'last_login', 
         'synced_at', 'created_at', 'updated_at',
@@ -35,10 +34,10 @@ class CustomerAdmin(admin.ModelAdmin):
             'fields': ('firebase_id',)
         }),
         ('Personal Information', {
-            'fields': ('full_name', 'email', 'phone_number', 'profile_image_url')
+            'fields': ('name', 'email', 'phone_number', 'profile_image_url')
         }),
         ('Account Status', {
-            'fields': ('status', 'verification_status', 'email_verified', 'phone_verified')
+            'fields': ('status', 'verification_status', 'phone_verified')
         }),
         ('Statistics', {
             'fields': ('total_rides', 'total_spent', 'account_balance'),
@@ -46,10 +45,6 @@ class CustomerAdmin(admin.ModelAdmin):
         }),
         ('Suspension Info', {
             'fields': ('suspension_reason', 'suspended_at', 'suspended_by'),
-            'classes': ('collapse',)
-        }),
-        ('Additional Info', {
-            'fields': ('username',),
             'classes': ('collapse',)
         }),
         ('Dates', {
@@ -70,7 +65,7 @@ class CustomerPaymentMethodAdmin(admin.ModelAdmin):
         'created_at'
     ]
     list_filter = ['payment_type', 'is_default', 'is_verified']
-    search_fields = ['customer__full_name', 'customer__email', 'masked_number']
+    search_fields = ['customer__name', 'customer__email', 'masked_number']
     readonly_fields = ['created_at', 'updated_at']
 
 
@@ -87,7 +82,7 @@ class CustomerRideHistoryAdmin(admin.ModelAdmin):
         'rental_status'
     ]
     list_filter = ['rental_status', 'payment_status', 'start_time']
-    search_fields = ['firebase_id', 'customer__full_name', 'bike_id']
+    search_fields = ['firebase_id', 'customer__name', 'bike_id']
     readonly_fields = ['firebase_id', 'synced_at', 'created_at']
     
     fieldsets = (
@@ -129,7 +124,7 @@ class CustomerActivityLogAdmin(admin.ModelAdmin):
         'timestamp'
     ]
     list_filter = ['activity_type', 'timestamp']
-    search_fields = ['customer__full_name', 'customer__email', 'description']
+    search_fields = ['customer__name', 'customer__email', 'description']
     readonly_fields = ['customer', 'activity_type', 'description', 'ip_address', 'device_info', 'related_id', 'timestamp']
     
     def has_add_permission(self, request):
@@ -150,7 +145,7 @@ class CustomerStatisticsAdmin(admin.ModelAdmin):
         'total_spent'
     ]
     list_filter = ['stats_date']
-    search_fields = ['customer__full_name', 'customer__email']
+    search_fields = ['customer__name', 'customer__email']
     readonly_fields = ['customer', 'stats_date', 'created_at']
     
     fieldsets = (
