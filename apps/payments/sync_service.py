@@ -120,30 +120,25 @@ class PaymentSyncService:
     def _get_ride_ids_for_payment(self, payment_firebase_id: str) -> list:
         """
         Helper function to find ride IDs associated with a payment.
-        
-        This function would query the Firebase 'ride_logs' collection
-        where 'paymentId' == payment_firebase_id and return the document IDs (firebase_ids)
-        of the matching ride logs.
-        
-        NOTE: This is not fully implemented. To properly link rides to payments,
-        you need to either:
-        1. Query Firebase ride_logs collection for rides with this paymentId
-        2. Store the payment_firebase_id in the CustomerRideHistory model during ride sync
-        3. Use a different linking strategy based on your data model
-        
+
+        Queries the Firebase 'ride_logs' collection where 'paymentId' == payment_firebase_id
+        and returns the document IDs (firebase_ids) of the matching ride logs.
+
         Returns:
             List of ride firebase_ids associated with this payment
         """
-        # Example implementation (requires Firebase integration):
-        # try:
-        #     ride_docs = self.db.collection('ride_logs').where('paymentId', '==', payment_firebase_id).stream()
-        #     return [doc.id for doc in ride_docs]
-        # except Exception as e:
-        #     logger.error(f"Error querying ride_logs for payment {payment_firebase_id}: {e}")
-        #     return []
-        
-        # For now, return empty list - ride linking will be incomplete
-        return []
+        try:
+            # Query Firebase ride_logs collection for rides with this paymentId
+            ride_docs = self.firebase_service.db.collection('ride_logs').where('paymentId', '==', payment_firebase_id).stream()
+            ride_ids = [doc.id for doc in ride_docs]
+
+            if ride_ids:
+                logger.debug(f"Found {len(ride_ids)} ride(s) for payment {payment_firebase_id}: {ride_ids}")
+
+            return ride_ids
+        except Exception as e:
+            logger.error(f"Error querying ride_logs for payment {payment_firebase_id}: {e}", exc_info=True)
+            return []
 
 
     def sync_single_payment(self, payment_id: str) -> bool:
