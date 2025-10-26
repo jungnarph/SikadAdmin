@@ -1,12 +1,14 @@
+# Updated content for jungnarph/sikadadmin/SikadAdmin-536c6c488986007128f3aeddc27af5ff3c51f130/apps/customers/admin.py
 """
 Django Admin for Customers
 """
 
 from django.contrib import admin
 from .models import (
-    Customer, CustomerPaymentMethod, CustomerRideHistory, 
-    CustomerActivityLog, CustomerStatistics
+    Customer, CustomerRideHistory,
+    CustomerStatistics
 )
+# REMOVED: CustomerActivityLog import
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -24,11 +26,11 @@ class CustomerAdmin(admin.ModelAdmin):
     list_filter = ['status', 'verification_status', 'phone_verified', 'registration_date']
     search_fields = ['firebase_id', 'email', 'phone_number', 'name']
     readonly_fields = [
-        'firebase_id', 'registration_date', 'last_login', 
+        'firebase_id', 'registration_date', 'last_login',
         'synced_at', 'created_at', 'updated_at',
         'total_rides', 'total_spent'
     ]
-    
+
     fieldsets = (
         ('Firebase Information', {
             'fields': ('firebase_id',)
@@ -54,21 +56,6 @@ class CustomerAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(CustomerPaymentMethod)
-class CustomerPaymentMethodAdmin(admin.ModelAdmin):
-    list_display = [
-        'customer',
-        'payment_type',
-        'masked_number',
-        'is_default',
-        'is_verified',
-        'created_at'
-    ]
-    list_filter = ['payment_type', 'is_default', 'is_verified']
-    search_fields = ['customer__name', 'customer__email', 'masked_number']
-    readonly_fields = ['created_at', 'updated_at']
-
-
 @admin.register(CustomerRideHistory)
 class CustomerRideHistoryAdmin(admin.ModelAdmin):
     list_display = [
@@ -84,7 +71,7 @@ class CustomerRideHistoryAdmin(admin.ModelAdmin):
     list_filter = ['rental_status', 'payment_status', 'start_time']
     search_fields = ['firebase_id', 'customer__name', 'bike_id']
     readonly_fields = ['firebase_id', 'synced_at', 'created_at']
-    
+
     fieldsets = (
         ('Rental Information', {
             'fields': ('firebase_id', 'customer', 'bike_id', 'rental_status')
@@ -114,24 +101,7 @@ class CustomerRideHistoryAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(CustomerActivityLog)
-class CustomerActivityLogAdmin(admin.ModelAdmin):
-    list_display = [
-        'customer',
-        'activity_type',
-        'description',
-        'ip_address',
-        'timestamp'
-    ]
-    list_filter = ['activity_type', 'timestamp']
-    search_fields = ['customer__name', 'customer__email', 'description']
-    readonly_fields = ['customer', 'activity_type', 'description', 'ip_address', 'device_info', 'related_id', 'timestamp']
-    
-    def has_add_permission(self, request):
-        return False
-    
-    def has_change_permission(self, request, obj=None):
-        return False
+# REMOVED CustomerActivityLogAdmin registration
 
 
 @admin.register(CustomerStatistics)
@@ -147,7 +117,7 @@ class CustomerStatisticsAdmin(admin.ModelAdmin):
     list_filter = ['stats_date']
     search_fields = ['customer__name', 'customer__email']
     readonly_fields = ['customer', 'stats_date', 'created_at']
-    
+
     fieldsets = (
         ('Statistics Summary', {
             'fields': (

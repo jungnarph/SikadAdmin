@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'apps.bikes',
     'apps.geofencing',
     'apps.customers',
+    'apps.rides',
     'apps.payments',
 ]
 

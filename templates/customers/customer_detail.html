@@ -44,7 +44,7 @@
                 {# MODIFIED: Added fallback to customer.username for name display #}
                 <h4>{{ customer.name|default:"Unnamed User" }}</h4>
                 <p class="text-muted">{{ customer.email|default:"No email" }}</p>
-                
+
                 <div class="mb-3">
                     {% if customer.status == 'ACTIVE' %}
                         <span class="badge bg-success px-3 py-2">
@@ -60,9 +60,9 @@
                         </span>
                     {% endif %}
                 </div>
-                
+
                 <hr>
-                
+
                 <div class="text-start">
                     <p class="mb-2">
                         <i class="fas fa-envelope text-muted"></i>
@@ -101,7 +101,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+
                 <div class="mb-3">
                     <label class="form-label"><strong>Account Verification:</strong></label>
                     <div>
@@ -212,58 +212,6 @@
             </div>
         </div>
 
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0">Payment Methods</h5>
-            </div>
-            <div class="card-body">
-                {% if payment_methods %}
-                    {% for method in payment_methods %}
-                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
-                        <div>
-                            <strong>{{ method.get_payment_type_display }}</strong><br>
-                            <small class="text-muted">{{ method.masked_number }}</small>
-                            {% if method.is_default %}
-                                <span class="badge bg-primary ms-2">Default</span>
-                            {% endif %}
-                        </div>
-                        <div>
-                            {% if method.is_verified %}
-                                <span class="badge bg-success">Verified</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Unverified</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-3">No payment methods added</p>
-                {% endif %}
-            </div>
         </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Recent Activity</h5>
-            </div>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                {% if activity_logs %}
-                    {% for log in activity_logs %}
-                    <div class="activity-item">
-                        <small class="text-muted">{{ log.timestamp|timesince }} ago</small>
-                        <p class="mb-1">
-                            <strong>{{ log.get_activity_type_display }}</strong>
-                            {% if log.description %}
-                            <br><small class="text-muted">{{ log.description }}</small>
-                            {% endif %}
-                        </p>
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-3">No activity recorded</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
 {% endblock %}

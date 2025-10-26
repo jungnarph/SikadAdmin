@@ -1,3 +1,4 @@
+# Updated content for jungnarph/sikadadmin/SikadAdmin-536c6c488986007128f3aeddc27af5ff3c51f130/apps/customers/models.py
 """
 Customer Models - PostgreSQL Analytics Models
 Primary data stored in Firebase, synced to PostgreSQL for analytics
@@ -113,49 +114,6 @@ class Customer(models.Model):
         return self.status == 'ACTIVE'
 
 
-class CustomerPaymentMethod(models.Model):
-    """Customer payment methods"""
-
-    PAYMENT_TYPE_CHOICES = [
-        ('GCASH', 'GCash'),
-        ('PAYMAYA', 'PayMaya'),
-        ('CARD', 'Credit/Debit Card'),
-        ('BANK', 'Bank Transfer'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(
-        Customer,
-        on_delete=models.CASCADE,
-        related_name='payment_methods',
-        to_field='firebase_id',
-        db_column='customer_firebase_id'
-    )
-
-    payment_type = models.CharField(max_length=20, choices=PAYMENT_TYPE_CHOICES)
-    provider_reference = models.CharField(max_length=255, blank=True)
-
-    # Masked details for display
-    masked_number = models.CharField(max_length=50, blank=True)
-    holder_name = models.CharField(max_length=255, blank=True)
-
-    is_default = models.BooleanField(default=False)
-    is_verified = models.BooleanField(default=False)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'customer_payment_methods'
-        verbose_name = 'Payment Method'
-        verbose_name_plural = 'Payment Methods'
-        ordering = ['-is_default', '-created_at']
-
-    def __str__(self):
-        # CHANGED: Use 'name' from related customer
-        return f"{self.customer.name} - {self.get_payment_type_display()} - {self.masked_number}"
-
-
 class CustomerRideHistory(models.Model):
     """
     Customer ride history synced from Firebase
@@ -231,57 +189,7 @@ class CustomerRideHistory(models.Model):
         return f"{self.customer.name} - {self.bike_id} - {self.start_time}"
 
 
-class CustomerActivityLog(models.Model):
-    """Log of customer activities"""
-
-    ACTIVITY_TYPE_CHOICES = [
-        ('REGISTRATION', 'Registration'),
-        ('LOGIN', 'Login'),
-        ('LOGOUT', 'Logout'),
-        ('RENTAL_START', 'Rental Started'),
-        ('RENTAL_END', 'Rental Ended'),
-        ('PAYMENT', 'Payment Made'),
-        ('PROFILE_UPDATE', 'Profile Updated'),
-        ('VERIFICATION_SUBMITTED', 'Verification Submitted'),
-        ('SUSPENSION', 'Account Suspended'),
-        ('REACTIVATION', 'Account Reactivated'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    customer = models.ForeignKey(
-        Customer,
-        on_delete=models.CASCADE,
-        related_name='activity_logs',
-        to_field='firebase_id',
-        db_column='customer_firebase_id'
-    )
-
-    activity_type = models.CharField(max_length=30, choices=ACTIVITY_TYPE_CHOICES)
-    description = models.TextField(blank=True)
-
-    # Location data
-    ip_address = models.GenericIPAddressField(null=True, blank=True)
-    device_info = models.CharField(max_length=255, blank=True)
-
-    # Related references
-    related_id = models.CharField(max_length=255, blank=True, help_text="Related rental, payment, etc.")
-
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'customer_activity_logs'
-        verbose_name = 'Activity Log'
-        verbose_name_plural = 'Activity Logs'
-        indexes = [
-            models.Index(fields=['customer', 'timestamp']),
-            models.Index(fields=['activity_type']),
-            models.Index(fields=['timestamp']),
-        ]
-        ordering = ['-timestamp']
-
-    def __str__(self):
-         # CHANGED: Use 'name' from related customer
-        return f"{self.customer.name} - {self.get_activity_type_display()} - {self.timestamp}"
+# REMOVED CustomerActivityLog model
 
 
 class CustomerStatistics(models.Model):
