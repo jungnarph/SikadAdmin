@@ -1,0 +1,311 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Ride {{ ride.firebase_id|truncatechars:12 }} - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'rides:ride_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Rides
+            </a>
+            <h1><i class="fas fa-bicycle"></i> Ride Details</h1>
+            <p class="text-muted">Ride ID: {{ ride.firebase_id }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <!-- Ride Status Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Ride Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 text-center">
+                    {% if ride.rental_status == 'ACTIVE' %}
+                        <span class="badge bg-primary px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-route"></i> Active
+                        </span>
+                    {% elif ride.rental_status == 'COMPLETED' %}
+                        <span class="badge bg-success px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-check-circle"></i> Completed
+                        </span>
+                    {% elif ride.rental_status == 'CANCELLED' %}
+                        <span class="badge bg-danger px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-times-circle"></i> Cancelled
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-question"></i> {{ ride.get_rental_status_display }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Start Time:</strong></label>
+                    <p class="mb-0">
+                        {% if ride.start_time %}
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ ride.start_time|date:"M d, Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>End Time:</strong></label>
+                    <p class="mb-0">
+                        {% if ride.end_time %}
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ ride.end_time|date:"M d, Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Duration:</strong></label>
+                    <p class="mb-0">
+                        {% if ride.duration_minutes > 0 %}
+                            <i class="fas fa-clock text-muted"></i>
+                            {{ ride.duration_minutes }} minutes
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Distance:</strong></label>
+                    <p class="mb-0">
+                        {% if ride.distance_km > 0 %}
+                            <i class="fas fa-route text-muted"></i>
+                            {{ ride.distance_km }} km
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if ride.cancellation_reason %}
+                <div class="mb-3">
+                    <label class="form-label"><strong>Cancellation Reason:</strong></label>
+                    <p class="mb-0 text-muted">{{ ride.cancellation_reason }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Customer Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Customer Information</h5>
+            </div>
+            <div class="card-body">
+                {% if ride.customer %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="user-avatar me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                            {{ ride.customer.name.0|default:'U'|upper }}
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ ride.customer.name|default:"Unknown" }}</h5>
+                            <small class="text-muted">{{ ride.customer.email|default:"No email" }}</small>
+                        </div>
+                    </div>
+                    <a href="{% url 'customers:customer_detail' ride.customer.firebase_id %}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-user"></i> View Customer Profile
+                    </a>
+                {% else %}
+                    <p class="text-muted mb-0">No customer information available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Bike Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Bike Information</h5>
+            </div>
+            <div class="card-body">
+                {% if ride.bike %}
+                    <div class="mb-2">
+                        <label class="form-label"><strong>Bike ID:</strong></label>
+                        <p class="mb-0">{{ ride.bike.firebase_id }}</p>
+                    </div>
+                    <a href="{% url 'bikes:bike_detail' ride.bike.firebase_id %}" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        <i class="fas fa-bicycle"></i> View Bike Details
+                    </a>
+                {% else %}
+                    <p class="text-muted mb-0">No bike information available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <!-- Payment Information Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Payment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>Amount Charged:</strong></label>
+                        <h3 class="text-success mb-0">₱{{ ride.amount_charged|floatformat:2 }}</h3>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>Payment Status:</strong></label>
+                        <div>
+                            {% if ride.payment_status == 'SUCCESSFUL' %}
+                                <span class="badge bg-success" style="font-size: 1rem;">
+                                    <i class="fas fa-check-circle"></i> Paid
+                                </span>
+                            {% elif ride.payment_status == 'PENDING' %}
+                                <span class="badge bg-warning" style="font-size: 1rem;">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif ride.payment_status == 'FAILED' %}
+                                <span class="badge bg-danger" style="font-size: 1rem;">
+                                    <i class="fas fa-times-circle"></i> Failed
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary" style="font-size: 1rem;">
+                                    <i class="fas fa-question"></i> {{ ride.get_payment_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if ride.payment_record %}
+                <hr>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Payment Method:</strong></label>
+                        <p class="mb-0">
+                            {% if ride.payment_record.payment_type == 'GCASH' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-mobile-alt"></i> GCash
+                                </span>
+                            {% elif ride.payment_record.payment_type == 'PAYMAYA' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-wallet"></i> PayMaya
+                                </span>
+                            {% elif ride.payment_record.payment_type == 'CARD' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-credit-card"></i> Card
+                                </span>
+                            {% elif ride.payment_record.payment_type == 'BANK' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-university"></i> Bank
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ ride.payment_record.get_payment_type_display }}
+                                </span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Payment Date:</strong></label>
+                        <p class="mb-0">
+                            {% if ride.payment_record.payment_date %}
+                                {{ ride.payment_record.payment_date|date:"M d, Y H:i" }}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Location Information Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Location Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>Start Location:</strong></label>
+                        {% if ride.start_latitude and ride.start_longitude %}
+                            <p class="mb-0">
+                                <i class="fas fa-map-marker-alt text-success"></i>
+                                {{ ride.start_latitude }}, {{ ride.start_longitude }}
+                            </p>
+                            {% if ride.start_zone_id %}
+                            <small class="text-muted">Zone: {{ ride.start_zone_id }}</small>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">N/A</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label"><strong>End Location:</strong></label>
+                        {% if ride.end_latitude and ride.end_longitude %}
+                            <p class="mb-0">
+                                <i class="fas fa-map-marker-alt text-danger"></i>
+                                {{ ride.end_latitude }}, {{ ride.end_longitude }}
+                            </p>
+                            {% if ride.end_zone_id %}
+                            <small class="text-muted">Zone: {{ ride.end_zone_id }}</small>
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted mb-0">N/A</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if ride.ride_path_points %}
+                <hr>
+                <div class="mb-2">
+                    <label class="form-label"><strong>Route Points:</strong></label>
+                    <p class="text-muted mb-0">{{ ride.ride_path_points|length }} points recorded</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sync Metadata Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Metadata</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Created At:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ ride.created_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Last Updated:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ ride.updated_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <label class="form-label"><strong>Last Synced:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-sync text-muted"></i>
+                            {{ ride.synced_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

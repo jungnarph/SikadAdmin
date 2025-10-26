@@ -552,14 +552,15 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'customer_list' %}active{% endif %}" 
+                    <a class="nav-link {% if request.resolver_match.url_name == 'customer_list' %}active{% endif %}"
                     href="{% url 'customers:customer_list' %}">
                         <i class="fas fa-users"></i> Customers
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <i class="fas fa-exchange-alt"></i> Transactions
+                    <a class="nav-link {% if request.resolver_match.app_name == 'rides' %}active{% endif %}"
+                    href="{% url 'rides:ride_list' %}">
+                        <i class="fas fa-route"></i> Rides
                     </a>
                 </li>
                 <li class="nav-item">
