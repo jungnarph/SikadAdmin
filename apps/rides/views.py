@@ -29,7 +29,7 @@ def ride_list(request):
 def ride_detail(request, ride_firebase_id):
     """Displays details for a single ride."""
     ride = get_object_or_404(
-        Ride.objects.select_related('customer', 'bike', 'payment_record__payment'), # Adjust related names if Payment model changes
+        Ride.objects.select_related('customer', 'bike', 'payment_record'),
         firebase_id=ride_firebase_id
     )
     context = {'ride': ride}
