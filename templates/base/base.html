@@ -559,7 +559,13 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="#">
-                        <i class="fas fa-receipt"></i> Transactions
+                        <i class="fas fa-exchange-alt"></i> Transactions
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.app_name == 'payments' %}active{% endif %}"
+                    href="{% url 'payments:payment_list' %}">
+                        <i class="fas fa-receipt"></i> Payments
                     </a>
                 </li>
                 <li class="nav-item">
