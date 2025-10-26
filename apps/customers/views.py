@@ -1,6 +1,7 @@
-# Updated content for jungnarph/sikadadmin/SikadAdmin-536c6c488986007128f3aeddc27af5ff3c51f130/apps/customers/views.py
+# Updated content for jungnarph/sikadadmin/SikadAdmin-9dd1748edd7b5cbea0d8950f7b19ca9cd15db370/apps/customers/views.py
 """
 Customers Views - Complete Customer Management
+Refactored to use apps.rides.models.Ride instead of CustomerRideHistory
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -11,7 +12,10 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum, Count, Avg
 from django.db.models.functions import TruncMonth
 from datetime import datetime, timedelta
-from .models import Customer, CustomerRideHistory # REMOVED: CustomerActivityLog
+# Import the main Customer model from the current app
+from .models import Customer 
+# Import the Ride model from the rides app
+from apps.rides.models import Ride # CHANGED: Import Ride model
 from .firebase_service import CustomerFirebaseService
 from .sync_service import CustomerSyncService
 from .forms import CustomerEditForm, CustomerSuspendForm, CustomerNoteForm
@@ -52,7 +56,8 @@ def customer_list(request):
         'total_count': Customer.objects.count(),
         'active_count': Customer.objects.filter(status='ACTIVE').count(),
         'suspended_count': Customer.objects.filter(status='SUSPENDED').count(),
-        'pending_verification': Customer.objects.filter(verification_status='PENDING').count(),
+        # Assuming 'PENDING' is still a valid verification status
+        'pending_verification': Customer.objects.filter(verification_status='PENDING').count(), 
     }
 
     return render(request, 'customers/customer_list.html', context)
@@ -74,24 +79,18 @@ def customer_detail(request, customer_id):
     except Customer.DoesNotExist:
         pg_customer = None
 
-    # Get ride history
-    ride_history = CustomerRideHistory.objects.filter(
+    # CHANGED: Get ride history using the Ride model
+    ride_history = Ride.objects.filter(
         customer__firebase_id=customer_id
-    ).order_by('-start_time')[:10]
+    ).select_related('bike').order_by('-start_time')[:10] # Added select_related for efficiency
 
-    # REMOVED: Get activity logs logic
-    # activity_logs = CustomerActivityLog.objects.filter(
-    #     customer__firebase_id=customer_id
-    # ).order_by('-timestamp')[:20]
-
-    # Get statistics from Firebase
+    # Get statistics from Firebase (remains unchanged)
     statistics = firebase_service.get_customer_statistics(customer_id)
 
     context = {
         'customer': customer_data,
         'pg_customer': pg_customer,
-        'ride_history': ride_history,
-        # REMOVED: activity_logs from context
+        'ride_history': ride_history, # Variable name kept for template compatibility
         'statistics': statistics,
     }
 
@@ -113,7 +112,8 @@ def customer_edit(request, customer_id):
         if form.is_valid():
             # Prepare update data
             updates = {
-                'name': form.cleaned_data['name'],
+                # Ensure keys match Firebase expectations if different from form
+                'name': form.cleaned_data['name'], 
                 'email': form.cleaned_data['email'],
                 'phone_number': form.cleaned_data['phone_number'],
             }
@@ -129,13 +129,13 @@ def customer_edit(request, customer_id):
                 messages.success(request, f'Customer {customer_id} updated successfully!')
                 return redirect('customers:customer_detail', customer_id=customer_id)
             else:
-                messages.error(request, 'Failed to update customer')
+                messages.error(request, 'Failed to update customer in Firebase')
         else:
             messages.error(request, 'Please correct the errors below')
     else:
         # Pre-fill form with existing data
         initial_data = {
-            'name': customer_data.get('name', ''),
+            'name': customer_data.get('name', ''), # Use 'name' from model
             'email': customer_data.get('email', ''),
             'phone_number': customer_data.get('phone_number', ''),
         }
@@ -155,12 +155,14 @@ def customer_suspend(request, customer_id):
         form = CustomerSuspendForm(request.POST)
         if form.is_valid():
             reason = form.cleaned_data['reason']
+            # Consider adding reason_category to the suspend call if needed by Firebase service
+            # reason_category = form.cleaned_data['reason_category'] 
 
             firebase_service = CustomerFirebaseService()
             success = firebase_service.suspend_customer(
                 customer_id,
                 reason,
-                str(request.user.id)
+                str(request.user.id) # Assuming admin_id is the Django user ID
             )
 
             if success:
@@ -168,38 +170,31 @@ def customer_suspend(request, customer_id):
                 sync_service = CustomerSyncService()
                 sync_service.sync_single_customer(customer_id)
 
-                # REMOVED: Activity logging logic
-                # try:
-                #     customer = Customer.objects.get(firebase_id=customer_id)
-                #     CustomerActivityLog.objects.create(
-                #         customer=customer,
-                #         activity_type='SUSPENSION',
-                #         description=f'Account suspended by {request.user.username}. Reason: {reason}'
-                #     )
-                # except Customer.DoesNotExist:
-                #     pass
-
                 messages.success(request, f'Customer {customer_id} has been suspended')
                 return redirect('customers:customer_detail', customer_id=customer_id)
             else:
-                messages.error(request, 'Failed to suspend customer')
+                messages.error(request, 'Failed to suspend customer in Firebase')
         else:
             messages.error(request, 'Please correct the errors below')
     else:
         form = CustomerSuspendForm()
 
-    # Get customer data
+    # Get customer data for context
     firebase_service = CustomerFirebaseService()
     customer_data = firebase_service.get_customer(customer_id)
 
     if not customer_data:
         messages.error(request, f'Customer {customer_id} not found')
         return redirect('customers:customer_list')
+        
+    # Pass customer name for display
+    customer_name = customer_data.get('name', customer_id) 
 
     return render(request, 'customers/customer_suspend.html', {
         'form': form,
         'customer_id': customer_id,
-        'customer': customer_data,
+        'customer_name': customer_name, # Pass name for template
+        'customer': customer_data, # Keep full data if template uses more fields
     })
 
 
@@ -215,20 +210,9 @@ def customer_reactivate(request, customer_id):
             sync_service = CustomerSyncService()
             sync_service.sync_single_customer(customer_id)
 
-            # REMOVED: Activity logging logic
-            # try:
-            #     customer = Customer.objects.get(firebase_id=customer_id)
-            #     CustomerActivityLog.objects.create(
-            #         customer=customer,
-            #         activity_type='REACTIVATION',
-            #         description=f'Account reactivated by {request.user.username}'
-            #     )
-            # except Customer.DoesNotExist:
-            #     pass
-
             messages.success(request, f'Customer {customer_id} has been reactivated')
         else:
-            messages.error(request, 'Failed to reactivate customer')
+            messages.error(request, 'Failed to reactivate customer in Firebase')
 
         return redirect('customers:customer_detail', customer_id=customer_id)
 
@@ -240,44 +224,55 @@ def customer_reactivate(request, customer_id):
         messages.error(request, f'Customer {customer_id} not found')
         return redirect('customers:customer_list')
 
+    # Pass customer name for display
+    customer_name = customer_data.get('name', customer_id)
+
     return render(request, 'customers/customer_reactivate.html', {
         'customer_id': customer_id,
-        'customer': customer_data,
+        'customer_name': customer_name, # Pass name for template
+        'customer': customer_data, # Keep full data if template uses more fields
     })
 
 
 @login_required
 def customer_rides(request, customer_id):
-    """View all rides for a customer"""
+    """View all rides for a customer using the Ride model"""
     try:
+        # Fetch customer from PostgreSQL using firebase_id
         customer = Customer.objects.get(firebase_id=customer_id)
     except Customer.DoesNotExist:
-        messages.error(request, f'Customer {customer_id} not found')
+        messages.error(request, f'Customer {customer_id} not found in the local database.')
+        # Optionally, try syncing the customer first before redirecting
+        # sync_service = CustomerSyncService()
+        # if sync_service.sync_single_customer(customer_id):
+        #    customer = Customer.objects.get(firebase_id=customer_id)
+        # else:
+        #    return redirect('customers:customer_list')
         return redirect('customers:customer_list')
 
-    # Get ride history with filters
-    rides = CustomerRideHistory.objects.filter(customer=customer).order_by('-start_time')
+    # CHANGED: Get ride history using the Ride model and the customer instance
+    rides_queryset = Ride.objects.filter(customer=customer).select_related('bike').order_by('-start_time')
 
-    # Apply filters
+    # Apply filters (adjust field names if needed based on Ride model)
     status = request.GET.get('status')
     if status:
-        rides = rides.filter(rental_status=status)
+        rides_queryset = rides_queryset.filter(rental_status=status) # Assuming field name is the same
 
     # Pagination
-    paginator = Paginator(rides, 20)
+    paginator = Paginator(rides_queryset, 20) # Rides per page
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Statistics
-    total_rides = rides.count()
-    completed_rides = rides.filter(rental_status='COMPLETED').count()
-    total_distance = rides.aggregate(Sum('distance_km'))['distance_km__sum'] or 0
-    total_spent = rides.aggregate(Sum('amount_charged'))['amount_charged__sum'] or 0
-    avg_duration = rides.aggregate(Avg('duration_minutes'))['duration_minutes__avg'] or 0
+    # Statistics (Calculated from the Ride model queryset)
+    total_rides = rides_queryset.count()
+    completed_rides = rides_queryset.filter(rental_status='COMPLETED').count() # Assuming status value
+    total_distance = rides_queryset.aggregate(Sum('distance_km'))['distance_km__sum'] or 0
+    total_spent = rides_queryset.aggregate(Sum('amount_charged'))['amount_charged__sum'] or 0
+    avg_duration = rides_queryset.aggregate(Avg('duration_minutes'))['duration_minutes__avg'] or 0
 
     context = {
-        'customer': customer,
-        'rides': page_obj,
+        'customer': customer, # Use the PostgreSQL customer object
+        'rides': page_obj,    # Pass the paginated rides
         'total_rides': total_rides,
         'completed_rides': completed_rides,
         'total_distance': total_distance,
@@ -290,22 +285,24 @@ def customer_rides(request, customer_id):
 
 @login_required
 def customer_verify(request, customer_id):
-    """Mark customer as verified"""
+    """Mark customer as verified (updates Firebase and syncs)"""
     if request.method == 'POST':
         firebase_service = CustomerFirebaseService()
-        success = firebase_service.verify_customer(customer_id)
+        # Assuming verify_customer updates 'verification_status' in Firebase
+        success = firebase_service.verify_customer(customer_id) 
 
         if success:
-            # Sync to PostgreSQL
+            # Sync to PostgreSQL to update the local record
             sync_service = CustomerSyncService()
             sync_service.sync_single_customer(customer_id)
 
-            messages.success(request, f'Customer {customer_id} has been verified')
+            messages.success(request, f'Customer {customer_id} has been marked as verified.')
         else:
-            messages.error(request, 'Failed to verify customer')
+            messages.error(request, 'Failed to verify customer in Firebase.')
 
         return redirect('customers:customer_detail', customer_id=customer_id)
 
+    # Redirect if GET request
     return redirect('customers:customer_detail', customer_id=customer_id)
 
 
@@ -316,10 +313,11 @@ def sync_customer(request, customer_id):
     success = sync_service.sync_single_customer(customer_id)
 
     if success:
-        messages.success(request, f'Customer {customer_id} synced successfully')
+        messages.success(request, f'Customer {customer_id} synced successfully from Firebase.')
     else:
-        messages.error(request, f'Failed to sync customer {customer_id}')
+        messages.error(request, f'Failed to sync customer {customer_id}. Check logs for details.')
 
+    # Redirect back to the detail page which will now show updated data (if sync worked)
     return redirect('customers:customer_detail', customer_id=customer_id)
 
 
@@ -327,11 +325,14 @@ def sync_customer(request, customer_id):
 def sync_all_customers(request):
     """Sync all customers from Firebase to PostgreSQL"""
     sync_service = CustomerSyncService()
-    stats = sync_service.sync_all_customers()
+    # Assuming sync_all_customers handles fetching and syncing logic
+    stats = sync_service.sync_all_customers() 
 
     messages.success(
         request,
-        f'Synced {stats["total"]} customers: {stats["created"]} created, {stats["updated"]} updated'
+        f'Sync initiated. Attempted sync for {stats.get("total", 0)} customers: '
+        f'{stats.get("created", 0)} created, {stats.get("updated", 0)} updated, '
+        f'{stats.get("failed", 0)} failed. Rides synced: {stats.get("rides_synced", 0)}. Check logs for details.'
     )
 
     return redirect('customers:customer_list')
@@ -340,22 +341,22 @@ def sync_all_customers(request):
 @login_required
 def customer_statistics(request):
     """View overall customer statistics and analytics"""
-    # Overall stats
+    # Overall stats from PostgreSQL
     total_customers = Customer.objects.count()
     active_customers = Customer.objects.filter(status='ACTIVE').count()
     suspended_customers = Customer.objects.filter(status='SUSPENDED').count()
     verified_customers = Customer.objects.filter(verification_status='VERIFIED').count()
 
-    # Recent registrations
+    # Recent registrations from PostgreSQL
     recent_customers = Customer.objects.order_by('-registration_date')[:10]
 
-    # Top customers by rides
+    # Top customers by rides (using calculated field in Customer model)
     top_by_rides = Customer.objects.filter(total_rides__gt=0).order_by('-total_rides')[:10]
 
-    # Top customers by spending
+    # Top customers by spending (using calculated field in Customer model)
     top_by_spending = Customer.objects.filter(total_spent__gt=0).order_by('-total_spent')[:10]
 
-    # Monthly registration trend (last 6 months)
+    # Monthly registration trend (last 6 months) from PostgreSQL
     six_months_ago = datetime.now() - timedelta(days=180)
     monthly_registrations = Customer.objects.filter(
         registration_date__gte=six_months_ago
@@ -365,6 +366,10 @@ def customer_statistics(request):
         count=Count('id')
     ).order_by('month')
 
+    # Convert month objects to strings for Chart.js labels
+    monthly_data = [{'month': item['month'].strftime('%b %Y'), 'count': item['count']} for item in monthly_registrations]
+
+
     context = {
         'total_customers': total_customers,
         'active_customers': active_customers,
@@ -373,7 +378,7 @@ def customer_statistics(request):
         'recent_customers': recent_customers,
         'top_by_rides': top_by_rides,
         'top_by_spending': top_by_spending,
-        'monthly_registrations': monthly_registrations,
+        'monthly_registrations_json': json.dumps(monthly_data), # Pass as JSON for JS
     }
 
     return render(request, 'customers/customer_statistics.html', context)
@@ -383,15 +388,21 @@ def customer_statistics(request):
 def customer_export(request):
     """Export customer data to CSV"""
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="customers_export.csv"'
+    # Format filename with current date
+    filename = f"customers_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
 
     writer = csv.writer(response)
+    # Write header row
     writer.writerow([
-        'Customer ID', 'Name', 'Email', 'Phone', 'Status',
-        'Verification', 'Total Rides', 'Total Spent', 'Registration Date'
+        'Firebase ID', 'Name', 'Email', 'Phone Number', 'Status',
+        'Verification Status', 'Phone Verified', 'Total Rides', 'Total Spent', 
+        'Account Balance', 'Registration Date', 'Last Login', 
+        'Suspended At', 'Suspension Reason' 
     ])
 
-    customers = Customer.objects.all()
+    # Fetch all customers (consider batching for very large datasets)
+    customers = Customer.objects.all().order_by('registration_date') 
     for customer in customers:
         writer.writerow([
             customer.firebase_id,
@@ -400,9 +411,17 @@ def customer_export(request):
             customer.phone_number,
             customer.status,
             customer.verification_status,
+            customer.phone_verified,
             customer.total_rides,
             customer.total_spent,
-            customer.registration_date.strftime('%Y-%m-%d') if customer.registration_date else ''
+            customer.account_balance, # Added balance
+            customer.registration_date.strftime('%Y-%m-%d %H:%M:%S') if customer.registration_date else '',
+            customer.last_login.strftime('%Y-%m-%d %H:%M:%S') if customer.last_login else '',
+            customer.suspended_at.strftime('%Y-%m-%d %H:%M:%S') if customer.suspended_at else '', # Added suspension date
+            customer.suspension_reason, # Added reason
         ])
 
     return response
+
+# Note: The add_admin_note view was removed as CustomerActivityLog was removed. 
+# If admin notes are needed, they should be stored elsewhere (e.g., directly in Firebase or a new simple model).

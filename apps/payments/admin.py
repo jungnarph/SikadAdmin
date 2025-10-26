@@ -2,8 +2,11 @@
 Django Admin configuration for the Payments app
 """
 
+import logging
 from django.contrib import admin
 from .models import Payment
+from django.urls import reverse
+from django.utils.html import format_html
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
@@ -40,7 +43,7 @@ class PaymentAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
     ]
-    list_select_related = ('customer', 'ride') # Optimize queries
+    list_select_related = ('customer', 'ride', 'ride__bike') # Optimize queries
 
     fieldsets = (
         ('Identifiers', {
@@ -71,16 +74,20 @@ class PaymentAdmin(admin.ModelAdmin):
     customer_link.admin_order_field = 'customer' # Allows sorting by customer
 
     def ride_link(self, obj):
-        from django.urls import reverse
-        from django.utils.html import format_html
         if obj.ride:
-            # Assuming you want to link back to the customer's ride history view or a specific ride detail if available
-            # Linking to customer ride history page for now
-            url = reverse('customers:customer_rides', args=[obj.customer.firebase_id]) # Adjust if you create a specific ride detail view
-            return format_html('<a href="{}">{}</a>', url, obj.ride.firebase_id[:8] + '...')
+            # Assuming you have a ride detail view named 'ride_detail' in the 'rides' app
+            try:
+                # Use the correct app name 'rides' and view name
+                url = reverse('rides:ride_detail', args=[obj.ride.firebase_id]) 
+                return format_html('<a href="{}">{}</a>', url, obj.ride.firebase_id[:8] + '...')
+            except Exception as e:
+                logger = logging.getLogger(__name__)
+                logger.error(f"Error generating ride link in PaymentAdmin: {e}")
+                # Fallback if URL reversing fails
+                return obj.ride.firebase_id[:8] + '... (link error)'
         return "N/A"
     ride_link.short_description = 'Ride'
-    ride_link.admin_order_field = 'ride' # Allows sorting by ride
+    ride_link.admin_order_field = 'ride'
 
     # Disable adding payments directly through admin (they should sync from Firebase)
     def has_add_permission(self, request):

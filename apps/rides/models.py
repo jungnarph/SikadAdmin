@@ -32,7 +32,7 @@ class Ride(models.Model):
 
     PAYMENT_STATUS_CHOICES = [
         ('PENDING', 'Pending'),
-        ('PAID', 'Paid'),
+        ('SUCCESSFUL', 'Paid'),
         ('FAILED', 'Failed'),
         ('REFUNDED', 'Refunded'),
         ('UNKNOWN', 'Unknown'), # Added for robustness

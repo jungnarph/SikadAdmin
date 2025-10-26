@@ -5,7 +5,7 @@ Django Admin for Customers
 
 from django.contrib import admin
 from .models import (
-    Customer, CustomerRideHistory,
+    Customer,
     CustomerStatistics
 )
 # REMOVED: CustomerActivityLog import
@@ -54,55 +54,6 @@ class CustomerAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
-
-
-@admin.register(CustomerRideHistory)
-class CustomerRideHistoryAdmin(admin.ModelAdmin):
-    list_display = [
-        'firebase_id',
-        'customer',
-        'bike_id',
-        'start_time',
-        'duration_minutes',
-        'distance_km',
-        'amount_charged',
-        'rental_status'
-    ]
-    list_filter = ['rental_status', 'payment_status', 'start_time']
-    search_fields = ['firebase_id', 'customer__name', 'bike_id']
-    readonly_fields = ['firebase_id', 'synced_at', 'created_at']
-
-    fieldsets = (
-        ('Rental Information', {
-            'fields': ('firebase_id', 'customer', 'bike_id', 'rental_status')
-        }),
-        ('Time & Location', {
-            'fields': (
-                'start_time', 'end_time', 'duration_minutes',
-                'start_latitude', 'start_longitude',
-                'end_latitude', 'end_longitude',
-                'start_zone_id', 'end_zone_id'
-            )
-        }),
-        ('Metrics', {
-            'fields': ('distance_km',)
-        }),
-        ('Payment', {
-            'fields': ('amount_charged', 'payment_status')
-        }),
-        ('Notes', {
-            'fields': ('cancellation_reason',),
-            'classes': ('collapse',)
-        }),
-        ('Sync', {
-            'fields': ('synced_at', 'created_at'),
-            'classes': ('collapse',)
-        }),
-    )
-
-
-# REMOVED CustomerActivityLogAdmin registration
-
 
 @admin.register(CustomerStatistics)
 class CustomerStatisticsAdmin(admin.ModelAdmin):

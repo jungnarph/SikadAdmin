@@ -4,7 +4,7 @@ Syncs payment data from Firebase Firestore 'payments' collection to the PostgreS
 """
 
 from .firebase_service import PaymentFirebaseService
-from .models import Payment, CUSTOMER_MODEL_PATH, RIDE_HISTORY_MODEL_PATH
+from .models import Payment, CUSTOMER_MODEL_PATH, RIDE_MODEL_PATH
 from django.apps import apps # To get models from string paths
 from datetime import datetime
 import logging
@@ -19,7 +19,7 @@ class PaymentSyncService:
         self.firebase_service = PaymentFirebaseService()
         # Get the actual model classes
         self.CustomerModel = apps.get_model(CUSTOMER_MODEL_PATH.split('.')[0], CUSTOMER_MODEL_PATH.split('.')[1])
-        self.RideHistoryModel = apps.get_model(RIDE_HISTORY_MODEL_PATH.split('.')[0], RIDE_HISTORY_MODEL_PATH.split('.')[1])
+        self.RideHistoryModel = apps.get_model(RIDE_MODEL_PATH.split('.')[0], RIDE_MODEL_PATH.split('.')[1])
 
     def _map_firebase_to_django(self, firebase_data: dict) -> dict:
         """Maps Firebase payment data keys/types to Django model fields."""

@@ -6,12 +6,10 @@ Primary data stored in Firebase, synced to PostgreSQL for analytics
 from django.db import models
 import uuid
 
-# Import Customer model using Django's recommended way to avoid circular imports
-# This assumes your customers app is correctly set up.
-# from apps.customers.models import Customer
-# Using string reference is safer:
 CUSTOMER_MODEL_PATH = 'customers.Customer'
-RIDE_HISTORY_MODEL_PATH = 'customers.CustomerRideHistory' # Assuming ride history is in customers app
+RIDE_MODEL_PATH = 'rides.Ride' 
+
+
 
 class Payment(models.Model):
     """
@@ -64,7 +62,7 @@ class Payment(models.Model):
     # Link to the specific ride this payment is for (optional, assumes one payment per ride)
     # Uses the firebase_id of the ride history record
     ride = models.OneToOneField(
-        RIDE_HISTORY_MODEL_PATH,
+        RIDE_MODEL_PATH,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
