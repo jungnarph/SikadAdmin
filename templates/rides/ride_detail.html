@@ -2,6 +2,18 @@
 
 {% block title %}Ride {{ ride.firebase_id|truncatechars:12 }} - Sikad Admin{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #rideMap {
+        height: 400px;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div class="d-flex justify-content-between align-items-center">
@@ -231,9 +243,16 @@
         <!-- Location Information Card -->
         <div class="card mt-3">
             <div class="card-header">
-                <h5 class="mb-0">Location Information</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-map-marked-alt"></i> Route Map & Location Information
+                </h5>
             </div>
             <div class="card-body">
+                <!-- Map Container -->
+                {% if ride.ride_path_points %}
+                <div id="rideMap"></div>
+                {% endif %}
+
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label class="form-label"><strong>Start Location:</strong></label>
@@ -308,4 +327,117 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+{% if ride.ride_path_points %}
+<script>
+    // Initialize the map
+    const map = L.map('rideMap').setView([14.8433, 120.8111], 13);
+
+    // Add tile layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Parse ride path points from Django template
+    const ridePathPoints = {{ ride.ride_path_points|safe }};
+
+    if (ridePathPoints && ridePathPoints.length > 0) {
+        // Convert ride path points to Leaflet format [lat, lng]
+        const latLngs = ridePathPoints.map(point => {
+            // Handle different possible formats
+            if (point.latitude && point.longitude) {
+                return [parseFloat(point.latitude), parseFloat(point.longitude)];
+            } else if (point.lat && point.lng) {
+                return [parseFloat(point.lat), parseFloat(point.lng)];
+            }
+            return null;
+        }).filter(point => point !== null);
+
+        if (latLngs.length > 0) {
+            // Draw the route as a polyline
+            const polyline = L.polyline(latLngs, {
+                color: '#007bff',
+                weight: 4,
+                opacity: 0.7,
+                smoothFactor: 1
+            }).addTo(map);
+
+            // Add start marker (green)
+            const startPoint = latLngs[0];
+            L.marker(startPoint, {
+                icon: L.divIcon({
+                    html: '<i class="fas fa-map-marker-alt fa-2x" style="color: #28a745;"></i>',
+                    className: 'start-marker',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                })
+            }).addTo(map).bindPopup('<strong>Start Location</strong>');
+
+            // Add end marker (red) - only if there's more than one point
+            if (latLngs.length > 1) {
+                const endPoint = latLngs[latLngs.length - 1];
+                L.marker(endPoint, {
+                    icon: L.divIcon({
+                        html: '<i class="fas fa-map-marker-alt fa-2x" style="color: #dc3545;"></i>',
+                        className: 'end-marker',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(map).bindPopup('<strong>End Location</strong>');
+            }
+
+            // Fit map bounds to show entire route with some padding
+            map.fitBounds(polyline.getBounds().pad(0.1));
+        }
+    }
+
+    // Handle case where we have start/end coordinates but no path points
+    {% if ride.start_latitude and ride.start_longitude and not ride.ride_path_points %}
+    const startLat = parseFloat('{{ ride.start_latitude }}');
+    const startLng = parseFloat('{{ ride.start_longitude }}');
+
+    L.marker([startLat, startLng], {
+        icon: L.divIcon({
+            html: '<i class="fas fa-map-marker-alt fa-2x" style="color: #28a745;"></i>',
+            className: 'start-marker',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+        })
+    }).addTo(map).bindPopup('<strong>Start Location</strong>');
+
+    {% if ride.end_latitude and ride.end_longitude %}
+    const endLat = parseFloat('{{ ride.end_latitude }}');
+    const endLng = parseFloat('{{ ride.end_longitude }}');
+
+    L.marker([endLat, endLng], {
+        icon: L.divIcon({
+            html: '<i class="fas fa-map-marker-alt fa-2x" style="color: #dc3545;"></i>',
+            className: 'end-marker',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+        })
+    }).addTo(map).bindPopup('<strong>End Location</strong>');
+
+    // Draw line between start and end
+    L.polyline([[startLat, startLng], [endLat, endLng]], {
+        color: '#007bff',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '10, 10'
+    }).addTo(map);
+
+    // Fit bounds to show both markers
+    const bounds = L.latLngBounds([[startLat, startLng], [endLat, endLng]]);
+    map.fitBounds(bounds.pad(0.2));
+    {% else %}
+    map.setView([startLat, startLng], 15);
+    {% endif %}
+    {% endif %}
+</script>
+{% endif %}
 {% endblock %}
