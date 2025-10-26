@@ -92,7 +92,7 @@
                 <div class="mb-3">
                     <label class="form-label"><strong>Phone Verification:</strong></label>
                     <div>
-                        {% if customer.phoneVerified %}
+                        {% if customer.phone_verified %}
                             <span class="badge bg-success"><i class="fas fa-check"></i> Verified</span>
                         {% else %}
                             <span class="badge bg-secondary"><i class="fas fa-times"></i> Unverified</span>
@@ -182,7 +182,7 @@
                             {% for ride in ride_history %}
                             <tr>
                                 <td><small>{{ ride.start_time|date:"M d, H:i" }}</small></td>
-                                <td><code>{{ ride.bike_id }}</code></td>
+                                <td><code>{{ ride.bike.firebase_id|default:"N/A" }}</code></td>
                                 <td>{{ ride.duration_minutes }} min</td>
                                 <td>{{ ride.distance_km|floatformat:2 }} km</td>
                                 <td><strong>₱{{ ride.amount_charged|floatformat:2 }}</strong></td>

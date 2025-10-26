@@ -1,4 +1,3 @@
-# Updated content for jungnarph/sikadadmin/SikadAdmin-9dd1748edd7b5cbea0d8950f7b19ca9cd15db370/apps/customers/views.py
 """
 Customers Views - Complete Customer Management
 Refactored to use apps.rides.models.Ride instead of CustomerRideHistory
@@ -65,32 +64,44 @@ def customer_list(request):
 
 @login_required
 def customer_detail(request, customer_id):
-    """View customer details from Firebase and PostgreSQL"""
-    firebase_service = CustomerFirebaseService()
-    customer_data = firebase_service.get_customer(customer_id)
-
-    if not customer_data:
-        messages.error(request, f'Customer {customer_id} not found in Firebase')
+    """View customer details from PostgreSQL"""
+    # Get customer from PostgreSQL
+    try:
+        customer = Customer.objects.get(firebase_id=customer_id)
+    except Customer.DoesNotExist:
+        messages.error(request, f'Customer {customer_id} not found')
         return redirect('customers:customer_list')
 
-    # Get PostgreSQL data if exists
-    try:
-        pg_customer = Customer.objects.get(firebase_id=customer_id)
-    except Customer.DoesNotExist:
-        pg_customer = None
-
-    # CHANGED: Get ride history using the Ride model
+    # Get ride history using the Ride model
     ride_history = Ride.objects.filter(
-        customer__firebase_id=customer_id
-    ).select_related('bike').order_by('-start_time')[:10] # Added select_related for efficiency
+        customer=customer
+    ).select_related('bike').order_by('-start_time')[:10]
 
-    # Get statistics from Firebase (remains unchanged)
-    statistics = firebase_service.get_customer_statistics(customer_id)
+    # Calculate statistics from PostgreSQL
+    rides_queryset = Ride.objects.filter(customer=customer)
+
+    total_rides = rides_queryset.count()
+    total_spent = rides_queryset.aggregate(Sum('amount_charged'))['amount_charged__sum'] or 0
+    total_distance = rides_queryset.aggregate(Sum('distance_km'))['distance_km__sum'] or 0
+    total_duration = rides_queryset.aggregate(Sum('duration_minutes'))['duration_minutes__sum'] or 0
+
+    completed_rides = rides_queryset.filter(rental_status='COMPLETED').count()
+    active_rides = rides_queryset.filter(rental_status='ACTIVE').count()
+
+    statistics = {
+        'total_rides': total_rides,
+        'total_spent': float(total_spent),
+        'total_distance': float(total_distance),
+        'total_duration': total_duration,
+        'completed_rides': completed_rides,
+        'active_rides': active_rides,
+        'average_ride_duration': total_duration / total_rides if total_rides > 0 else 0,
+        'average_distance': float(total_distance) / total_rides if total_rides > 0 else 0,
+    }
 
     context = {
-        'customer': customer_data,
-        'pg_customer': pg_customer,
-        'ride_history': ride_history, # Variable name kept for template compatibility
+        'customer': customer,
+        'ride_history': ride_history,
         'statistics': statistics,
     }
 
