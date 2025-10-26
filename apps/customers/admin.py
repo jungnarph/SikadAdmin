@@ -8,7 +8,6 @@ from .models import (
     Customer,
     CustomerStatistics
 )
-# REMOVED: CustomerActivityLog import
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
