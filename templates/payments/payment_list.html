@@ -1,0 +1,279 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Payment Management - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-receipt"></i> Payment Management</h1>
+        <p class="text-muted">View and manage all payment transactions</p>
+    </div>
+    <div>
+        <a href="{% url 'payments:sync_all_payments' %}" class="btn btn-primary">
+            <i class="fas fa-sync"></i> Sync from Firebase
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Payments</h6>
+                        <h2 class="mb-0">{{ total_payments }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #28a745;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Successful</h6>
+                        <h2 class="mb-0 text-success">
+                            {{ payments|length|default:0 }}
+                        </h2>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Pending</h6>
+                        <h2 class="mb-0 text-warning">-</h2>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #dc3545;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Failed</h6>
+                        <h2 class="mb-0 text-danger">-</h2>
+                    </div>
+                    <div class="text-danger" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                {{ form.payment_status.label_tag }}
+                {{ form.payment_status }}
+            </div>
+            <div class="col-md-2">
+                {{ form.payment_type.label_tag }}
+                {{ form.payment_type }}
+            </div>
+            <div class="col-md-2">
+                {{ form.date_from.label_tag }}
+                {{ form.date_from }}
+            </div>
+            <div class="col-md-2">
+                {{ form.date_to.label_tag }}
+                {{ form.date_to }}
+            </div>
+            <div class="col-md-3">
+                {{ form.search.label_tag }}
+                {{ form.search }}
+            </div>
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payments Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Payments</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Payment ID</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Payment Type</th>
+                        <th>Status</th>
+                        <th>Payment Date</th>
+                        <th>Ride ID</th>
+                        <th>Reference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">{{ payment.firebase_id|truncatechars:12 }}</small>
+                        </td>
+                        <td>
+                            {% if payment.customer %}
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-2" style="width: 35px; height: 35px; font-size: 14px;">
+                                    {{ payment.customer.name.0|default:'U'|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ payment.customer.name|default:"Unknown" }}</strong><br>
+                                    <small class="text-muted">{{ payment.customer.email|truncatechars:20|default:"N/A" }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Unknown Customer</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong class="text-success">₱{{ payment.amount|floatformat:2 }}</strong>
+                        </td>
+                        <td>
+                            {% if payment.payment_type == 'GCASH' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-mobile-alt"></i> GCash
+                                </span>
+                            {% elif payment.payment_type == 'PAYMAYA' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-wallet"></i> PayMaya
+                                </span>
+                            {% elif payment.payment_type == 'CARD' %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-credit-card"></i> Card
+                                </span>
+                            {% elif payment.payment_type == 'BANK' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-university"></i> Bank
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question"></i> {{ payment.get_payment_type_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.payment_status == 'SUCCESSFUL' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Successful
+                                </span>
+                            {% elif payment.payment_status == 'PENDING' %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif payment.payment_status == 'FAILED' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle"></i> Failed
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-question"></i> {{ payment.get_payment_status_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.payment_date %}
+                                <small>{{ payment.payment_date|date:"M d, Y H:i" }}</small>
+                            {% else %}
+                                <small class="text-muted">N/A</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if payment.ride %}
+                                <small class="text-muted">
+                                    <i class="fas fa-bicycle"></i> {{ payment.ride.firebase_id|truncatechars:12 }}
+                                </small>
+                            {% else %}
+                                <small class="text-muted">N/A</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ payment.payment_account_info|truncatechars:15|default:"N/A" }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No payments found. Click "Sync from Firebase" to load payments.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if payments.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if payments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ payments.previous_page_number }}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ payments.number }} of {{ payments.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if payments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ payments.next_page_number }}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ payments.paginator.num_pages }}{% if request.GET.payment_status %}&payment_status={{ request.GET.payment_status }}{% endif %}{% if request.GET.payment_type %}&payment_type={{ request.GET.payment_type }}{% endif %}{% if request.GET.date_from %}&date_from={{ request.GET.date_from }}{% endif %}{% if request.GET.date_to %}&date_to={{ request.GET.date_to }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Preserve filter parameters when syncing
+    document.addEventListener('DOMContentLoaded', function() {
+        // Any additional JavaScript for the payment list can go here
+    });
+</script>
+{% endblock %}
