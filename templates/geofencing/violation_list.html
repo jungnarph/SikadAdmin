@@ -209,14 +209,15 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" 
-                                        onclick="showViolationDetails('{{ violation.id }}', {{ violation.latitude }}, {{ violation.longitude }})"
+                                <button class="btn btn-outline-primary"
+                                        onclick="showViolationDetails('{{ violation.id }}', {{ violation.latitude }}, {{ violation.longitude }}, '{{ violation.zone.firebase_id }}')"
                                         title="View on Map">
                                     <i class="fas fa-map-marker-alt"></i>
                                 </button>
                                 {% if not violation.resolved %}
-                                <button class="btn btn-outline-success" 
+                                <button class="btn btn-outline-success"
                                         onclick="resolveViolation('{{ violation.id }}')"
+                                        id="resolve-btn-{{ violation.id }}"
                                         title="Mark as Resolved">
                                     <i class="fas fa-check"></i>
                                 </button>
@@ -276,13 +277,29 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h5 class="modal-title" id="violationModalTitle">
                     <i class="fas fa-map-marker-alt"></i> Violation Location
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div id="violationMapInfo" class="alert alert-info mb-3" style="display: none;">
+                    <i class="fas fa-info-circle"></i> <span id="violationMapInfoText"></span>
+                </div>
                 <div id="violationMap"></div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-danger me-2">
+                                <i class="fas fa-map-marker-alt"></i> Violation Point
+                            </span>
+                            <span class="badge bg-primary" id="zoneNameBadge">
+                                <i class="fas fa-draw-polygon"></i> Zone Boundary
+                            </span>
+                        </div>
+                        <small class="text-muted" id="validationStatus"></small>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -294,15 +311,51 @@
 <script>
     let violationMap = null;
     let violationMarker = null;
-    
-    function showViolationDetails(violationId, lat, lng) {
+    let zonePolygon = null;
+    let mapLayers = [];
+
+    // Get CSRF token for AJAX requests
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Point-in-polygon check (ray casting algorithm)
+    function isPointInPolygon(point, polygon) {
+        let x = point[0], y = point[1];
+        let inside = false;
+
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            let xi = polygon[i][0], yi = polygon[i][1];
+            let xj = polygon[j][0], yj = polygon[j][1];
+
+            let intersect = ((yi > y) != (yj > y))
+                && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+
+        return inside;
+    }
+
+    function showViolationDetails(violationId, lat, lng, zoneFirebaseId) {
         // Initialize map if not already done
         if (!violationMap) {
             const modalEl = document.getElementById('violationModal');
             modalEl.addEventListener('shown.bs.modal', function() {
                 if (!violationMap) {
                     violationMap = L.map('violationMap').setView([lat, lng], 15);
-                    
+
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '© OpenStreetMap contributors',
                         maxZoom: 19
@@ -310,66 +363,226 @@
                 }
             });
         }
-        
+
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('violationModal'));
         modal.show();
-        
-        // Update map position and marker
+
+        // Clear previous layers
+        mapLayers.forEach(layer => violationMap.removeLayer(layer));
+        mapLayers = [];
+
+        // Fetch zone data and display on map
         setTimeout(() => {
             if (violationMap) {
-                violationMap.setView([lat, lng], 16);
-                
-                // Remove old marker
-                if (violationMarker) {
-                    violationMap.removeLayer(violationMarker);
+                // Show loading info
+                const mapInfoEl = document.getElementById('violationMapInfo');
+                const mapInfoTextEl = document.getElementById('violationMapInfoText');
+
+                if (mapInfoEl && mapInfoTextEl) {
+                    mapInfoEl.style.display = 'block';
+                    mapInfoTextEl.textContent = 'Loading zone data...';
                 }
-                
-                // Add new marker
-                violationMarker = L.marker([lat, lng], {
-                    icon: L.divIcon({
-                        html: '<i class="fas fa-exclamation-circle fa-2x" style="color: #dc3545;"></i>',
-                        className: 'violation-marker',
-                        iconSize: [30, 30]
+
+                // Fetch zone polygon data
+                fetch(`/geofencing/api/zone/${zoneFirebaseId}/data/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.zone) {
+                            const zone = data.zone;
+
+                            // Update modal title
+                            const modalTitleEl = document.getElementById('violationModalTitle');
+                            if (modalTitleEl) {
+                                modalTitleEl.innerHTML =
+                                    `<i class="fas fa-map-marker-alt"></i> Violation in ${zone.name}`;
+                            }
+
+                            const zoneBadgeEl = document.getElementById('zoneNameBadge');
+                            if (zoneBadgeEl) {
+                                zoneBadgeEl.innerHTML =
+                                    `<i class="fas fa-draw-polygon"></i> ${zone.name}`;
+                            }
+
+                            // Draw zone polygon if available
+                            if (zone.polygon_points && zone.polygon_points.length >= 3) {
+                                const polygonCoords = zone.polygon_points.map(p => [p.lat, p.lng]);
+
+                                zonePolygon = L.polygon(polygonCoords, {
+                                    color: zone.color_code || '#3388ff',
+                                    fillColor: zone.color_code || '#3388ff',
+                                    fillOpacity: 0.2,
+                                    weight: 3
+                                }).addTo(violationMap);
+
+                                zonePolygon.bindPopup(`
+                                    <strong>${zone.name}</strong><br>
+                                    Zone Boundary<br>
+                                    <small>${zone.polygon_points.length} points</small>
+                                `);
+
+                                mapLayers.push(zonePolygon);
+
+                                // Validate if point is actually outside
+                                const isInside = isPointInPolygon([lat, lng], polygonCoords);
+                                const validationEl = document.getElementById('validationStatus');
+
+                                if (validationEl) {
+                                    if (isInside) {
+                                        validationEl.innerHTML = '<span class="text-warning"><i class="fas fa-exclamation-triangle"></i> Point is INSIDE zone (false positive)</span>';
+                                        if (mapInfoTextEl) {
+                                            mapInfoTextEl.textContent =
+                                                'Warning: This point appears to be inside the zone boundary. This may be a false positive.';
+                                        }
+                                        if (mapInfoEl) {
+                                            mapInfoEl.className = 'alert alert-warning mb-3';
+                                        }
+                                    } else {
+                                        validationEl.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> Confirmed: Point is OUTSIDE zone</span>';
+                                        if (mapInfoTextEl) {
+                                            mapInfoTextEl.textContent =
+                                                'Validated: This violation point is confirmed to be outside the zone boundary.';
+                                        }
+                                        if (mapInfoEl) {
+                                            mapInfoEl.className = 'alert alert-success mb-3';
+                                        }
+                                    }
+                                }
+
+                                // Fit map to show both zone and violation point
+                                const bounds = L.latLngBounds(polygonCoords);
+                                bounds.extend([lat, lng]);
+                                violationMap.fitBounds(bounds, { padding: [50, 50] });
+                            } else {
+                                // No polygon data available
+                                violationMap.setView([lat, lng], 16);
+                                if (mapInfoEl && mapInfoTextEl) {
+                                    mapInfoEl.style.display = 'block';
+                                    mapInfoTextEl.textContent =
+                                        'Zone polygon data not available. Showing violation point only.';
+                                    mapInfoEl.className = 'alert alert-warning mb-3';
+                                }
+                            }
+
+                            // Add violation marker
+                            violationMarker = L.marker([lat, lng], {
+                                icon: L.divIcon({
+                                    html: '<i class="fas fa-exclamation-circle fa-2x" style="color: #dc3545;"></i>',
+                                    className: 'violation-marker',
+                                    iconSize: [30, 30],
+                                    iconAnchor: [15, 15]
+                                })
+                            }).addTo(violationMap);
+
+                            violationMarker.bindPopup(`
+                                <strong style="color: #dc3545;">Violation Location</strong><br>
+                                Lat: ${lat.toFixed(6)}<br>
+                                Lng: ${lng.toFixed(6)}<br>
+                                <small class="text-muted">Zone: ${zone.name}</small>
+                            `).openPopup();
+
+                            mapLayers.push(violationMarker);
+
+                        } else {
+                            // Error fetching zone data
+                            console.error('Failed to fetch zone data:', data.error);
+                            violationMap.setView([lat, lng], 16);
+
+                            // Still show violation marker
+                            violationMarker = L.marker([lat, lng], {
+                                icon: L.divIcon({
+                                    html: '<i class="fas fa-exclamation-circle fa-2x" style="color: #dc3545;"></i>',
+                                    className: 'violation-marker',
+                                    iconSize: [30, 30]
+                                })
+                            }).addTo(violationMap);
+
+                            violationMarker.bindPopup(`
+                                <strong>Violation Location</strong><br>
+                                Lat: ${lat.toFixed(6)}<br>
+                                Lng: ${lng.toFixed(6)}
+                            `).openPopup();
+
+                            mapLayers.push(violationMarker);
+
+                            const mapInfoEl = document.getElementById('violationMapInfo');
+                            const mapInfoTextEl = document.getElementById('violationMapInfoText');
+
+                            if (mapInfoEl && mapInfoTextEl) {
+                                mapInfoEl.style.display = 'block';
+                                mapInfoTextEl.textContent =
+                                    'Could not load zone data: ' + (data.error || 'Unknown error');
+                                mapInfoEl.className = 'alert alert-danger mb-3';
+                            }
+                        }
+
+                        violationMap.invalidateSize();
                     })
-                }).addTo(violationMap);
-                
-                violationMarker.bindPopup(`
-                    <strong>Violation Location</strong><br>
-                    Lat: ${lat.toFixed(6)}<br>
-                    Lng: ${lng.toFixed(6)}
-                `).openPopup();
-                
-                violationMap.invalidateSize();
+                    .catch(error => {
+                        console.error('Error fetching zone data:', error);
+                        violationMap.setView([lat, lng], 16);
+
+                        const mapInfoEl = document.getElementById('violationMapInfo');
+                        const mapInfoTextEl = document.getElementById('violationMapInfoText');
+
+                        if (mapInfoEl && mapInfoTextEl) {
+                            mapInfoEl.style.display = 'block';
+                            mapInfoTextEl.textContent =
+                                'Error loading zone data. Showing violation point only.';
+                            mapInfoEl.className = 'alert alert-danger mb-3';
+                        }
+
+                        violationMap.invalidateSize();
+                    });
             }
         }, 300);
     }
-    
+
     function resolveViolation(violationId) {
         if (confirm('Mark this violation as resolved?')) {
-            // TODO: Implement AJAX call to resolve violation
-            // For now, just show alert
-            alert('Violation resolution will be implemented with backend API');
-            
-            // Example AJAX implementation:
-            /*
+            const btn = document.getElementById(`resolve-btn-${violationId}`);
+
+            // Disable button and show loading state
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            }
+
             fetch(`/geofencing/violations/${violationId}/resolve/`, {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': '{{ csrf_token }}',
+                    'X-CSRFToken': csrftoken,
                     'Content-Type': 'application/json'
                 }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    // Show success message
+                    alert('✓ Violation marked as resolved');
+                    // Reload page to show updated status
                     location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to resolve violation'));
+                    // Re-enable button
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-check"></i>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error resolving violation:', error);
+                alert('Error: Failed to resolve violation');
+                // Re-enable button
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i>';
                 }
             });
-            */
         }
     }
-    
+
     // Export violations to CSV
     function exportViolations() {
         window.location.href = '{% url "geofencing:violation_list" %}?export=csv';

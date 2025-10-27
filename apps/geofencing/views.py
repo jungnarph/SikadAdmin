@@ -6,9 +6,12 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 from .models import Zone, ZoneViolation
 from .firebase_service import GeofenceFirebaseService
 from .sync_service import GeofenceSyncService
+from .violation_listener import GeofenceViolationListener
 from .forms import ZoneCreateForm, ZoneUpdateForm, ViolationFilterForm
 from apps.accounts.decorators import super_admin_required, staff_or_super_admin_required
 import json
@@ -281,10 +284,132 @@ def sync_all_zones(request):
     """Sync all zones from Firebase to PostgreSQL"""
     sync_service = GeofenceSyncService()
     stats = sync_service.sync_all_zones()
-    
+
     messages.success(
         request,
         f'Synced {stats["total"]} zones: {stats["created"]} created, {stats["updated"]} updated'
     )
-    
+
     return redirect('geofencing:zone_list')
+
+
+@login_required
+@staff_or_super_admin_required
+def process_violations(request):
+    """
+    Process geofence violations from Firebase.
+    Can be triggered manually via POST or show status via GET.
+    """
+    if request.method == 'POST':
+        limit = int(request.POST.get('limit', 100))
+
+        try:
+            listener = GeofenceViolationListener()
+            processed, created = listener.process_existing_violations(limit=limit)
+
+            messages.success(
+                request,
+                f'✓ Processed {processed} violations. Created {created} new ZoneViolation records.'
+            )
+        except Exception as e:
+            messages.error(request, f'Error processing violations: {str(e)}')
+
+        return redirect('geofencing:violation_list')
+
+    # GET request - show violation processing status
+    context = {
+        'total_violations': ZoneViolation.objects.count(),
+        'unresolved_violations': ZoneViolation.objects.filter(resolved=False).count(),
+        'recent_violations': ZoneViolation.objects.order_by('-created_at')[:10],
+    }
+
+    return render(request, 'geofencing/process_violations.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_zone_data(request, zone_firebase_id):
+    """
+    API endpoint to get zone polygon data for map visualization
+    """
+    try:
+        zone = Zone.objects.get(firebase_id=zone_firebase_id)
+
+        # Normalize polygon points for frontend
+        polygon_points = []
+        if zone.polygon_points:
+            for point in zone.polygon_points:
+                if isinstance(point, dict):
+                    if 'latitude' in point and 'longitude' in point:
+                        polygon_points.append({
+                            'lat': float(point['latitude']),
+                            'lng': float(point['longitude'])
+                        })
+
+        return JsonResponse({
+            'success': True,
+            'zone': {
+                'firebase_id': zone.firebase_id,
+                'name': zone.name,
+                'color_code': zone.color_code,
+                'is_active': zone.is_active,
+                'polygon_points': polygon_points,
+                'center': {
+                    'lat': float(zone.center_latitude) if zone.center_latitude else None,
+                    'lng': float(zone.center_longitude) if zone.center_longitude else None
+                }
+            }
+        })
+    except Zone.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Zone not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required
+@staff_or_super_admin_required
+@require_http_methods(["POST"])
+def resolve_violation(request, violation_id):
+    """
+    API endpoint to mark a violation as resolved
+    """
+    try:
+        violation = ZoneViolation.objects.get(id=violation_id)
+
+        # Update violation status
+        violation.resolved = True
+        violation.resolved_at = timezone.now()
+
+        # Add note about who resolved it
+        resolver_name = request.user.get_full_name() or request.user.username
+        resolution_note = f"Resolved by {resolver_name} on {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
+        if violation.notes:
+            violation.notes += f"\n{resolution_note}"
+        else:
+            violation.notes = resolution_note
+
+        violation.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Violation marked as resolved',
+            'resolved_at': violation.resolved_at.strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+    except ZoneViolation.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Violation not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
