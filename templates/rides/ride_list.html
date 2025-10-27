@@ -8,6 +8,11 @@
         <h1><i class="fas fa-bicycle"></i> Ride Management</h1>
         <p class="text-muted">View and manage all bike rides</p>
     </div>
+    <div>
+        <a href="{% url 'rides:sync_all_rides' %}" class="btn btn-primary me-2">
+            <i class="fas fa-sync"></i> Sync from Firebase
+        </a>
+    </div>
 </div>
 
 <!-- Statistics Cards -->

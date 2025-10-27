@@ -404,17 +404,17 @@ class RideSyncService:
                 f"Points: {points_count}, "
                 f"Start: {defaults.get('start_time')}"
             )
-            return True
+            return True, created
 
         except Exception as e:
             logger.error(f"Error syncing ride {ride_id}: {e}", exc_info=True)
-            return False
+            return False, False
 
     def sync_all_rides(self, limit: int = 1000) -> dict:
         """
         Sync multiple rides from Firebase to PostgreSQL.
         """
-        stats = {'total': 0, 'processed': 0, 'failed': 0}
+        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0}
         try:
             logger.info(f"Starting bulk ride sync with limit {limit}")
             rides_data = self.firebase_service.list_rides(limit=limit)
@@ -425,7 +425,12 @@ class RideSyncService:
             for ride_data in rides_data:
                 ride_id = ride_data.get('firebase_id')
                 if ride_id:
-                    if self.sync_single_ride(ride_id, ride_data):
+                    success, created = self.sync_single_ride(ride_id, ride_data)
+                    if success:
+                        if created:
+                            stats['created'] += 1
+                        else:
+                            stats['updated'] += 1
                         stats['processed'] += 1
                     else:
                         stats['failed'] += 1
