@@ -10,6 +10,7 @@ from .models import Zone, ZoneViolation
 from .firebase_service import GeofenceFirebaseService
 from .sync_service import GeofenceSyncService
 from .forms import ZoneCreateForm, ZoneUpdateForm, ViolationFilterForm
+from apps.accounts.decorators import super_admin_required, staff_or_super_admin_required
 import json
 
 
@@ -69,6 +70,7 @@ def zone_detail(request, zone_id):
 
 
 @login_required
+@staff_or_super_admin_required
 def zone_create(request):
     """Create a new geofence zone"""
     if request.method == 'POST':
@@ -125,6 +127,7 @@ def zone_create(request):
 
 
 @login_required
+@staff_or_super_admin_required
 def zone_update(request, zone_id):
     """Update geofence zone"""
     firebase_service = GeofenceFirebaseService()
@@ -186,6 +189,7 @@ def zone_update(request, zone_id):
 
 
 @login_required
+@super_admin_required
 def zone_delete(request, zone_id):
     """Delete (deactivate) geofence zone"""
     if request.method == 'POST':
@@ -257,6 +261,7 @@ def violation_list(request):
 
 
 @login_required
+@staff_or_super_admin_required
 def sync_zone(request, zone_id):
     """Sync a single zone from Firebase to PostgreSQL"""
     sync_service = GeofenceSyncService()
@@ -271,6 +276,7 @@ def sync_zone(request, zone_id):
 
 
 @login_required
+@staff_or_super_admin_required
 def sync_all_zones(request):
     """Sync all zones from Firebase to PostgreSQL"""
     sync_service = GeofenceSyncService()

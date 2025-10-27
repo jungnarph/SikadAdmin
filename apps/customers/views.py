@@ -18,6 +18,7 @@ from apps.rides.models import Ride # CHANGED: Import Ride model
 from .firebase_service import CustomerFirebaseService
 from .sync_service import CustomerSyncService
 from .forms import CustomerEditForm, CustomerSuspendForm, CustomerNoteForm
+from apps.accounts.decorators import super_admin_required
 import json
 import csv
 
@@ -109,6 +110,7 @@ def customer_detail(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def customer_edit(request, customer_id):
     """Edit customer information"""
     firebase_service = CustomerFirebaseService()
@@ -160,6 +162,7 @@ def customer_edit(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def customer_suspend(request, customer_id):
     """Suspend a customer account"""
     if request.method == 'POST':
@@ -210,6 +213,7 @@ def customer_suspend(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def customer_reactivate(request, customer_id):
     """Reactivate a suspended customer account"""
     if request.method == 'POST':
@@ -295,6 +299,7 @@ def customer_rides(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def customer_verify(request, customer_id):
     """Mark customer as verified (updates Firebase and syncs)"""
     if request.method == 'POST':
@@ -318,6 +323,7 @@ def customer_verify(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def sync_customer(request, customer_id):
     """Sync a single customer from Firebase to PostgreSQL"""
     sync_service = CustomerSyncService()
@@ -333,6 +339,7 @@ def sync_customer(request, customer_id):
 
 
 @login_required
+@super_admin_required
 def sync_all_customers(request):
     """Sync all customers from Firebase to PostgreSQL"""
     sync_service = CustomerSyncService()
@@ -396,6 +403,7 @@ def customer_statistics(request):
 
 
 @login_required
+@super_admin_required
 def customer_export(request):
     """Export customer data to CSV"""
     response = HttpResponse(content_type='text/csv')

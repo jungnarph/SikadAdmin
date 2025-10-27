@@ -10,6 +10,7 @@ from .models import Bike
 from .firebase_service import BikeFirebaseService
 from .sync_service import BikeSyncService
 from .forms import BikeCreateForm, BikeUpdateForm
+from apps.accounts.decorators import super_admin_required, staff_or_super_admin_required
 import json
 
 
@@ -74,6 +75,7 @@ def bike_detail(request, bike_id):
 
 
 @login_required
+@super_admin_required
 def bike_create(request):
     """Create a new bike in Firebase and PostgreSQL"""
     if request.method == 'POST':
@@ -127,6 +129,7 @@ def bike_create(request):
 
 
 @login_required
+@staff_or_super_admin_required
 def bike_update(request, bike_id):
     """Update bike in Firebase and PostgreSQL"""
     firebase_service = BikeFirebaseService()
@@ -191,6 +194,7 @@ def bike_update(request, bike_id):
 
 
 @login_required
+@super_admin_required
 def bike_delete(request, bike_id):
     """Archive bike from Firebase and PostgreSQL"""
     if request.method == 'POST':
@@ -224,6 +228,7 @@ def bike_delete(request, bike_id):
 
 
 @login_required
+@super_admin_required
 def bike_restore(request, bike_id):
     """Restore an archived bike"""
     if request.method == 'POST':
@@ -318,6 +323,7 @@ def bike_map(request):
 
 
 @login_required
+@super_admin_required
 def bike_update_status(request, bike_id):
     """Quick status update via AJAX"""
     if request.method == 'POST':
@@ -348,6 +354,7 @@ def bike_update_status(request, bike_id):
 
 
 @login_required
+@super_admin_required
 def sync_bike(request, bike_id):
     """Sync a single bike from Firebase to PostgreSQL"""
     sync_service = BikeSyncService()
@@ -362,6 +369,7 @@ def sync_bike(request, bike_id):
 
 
 @login_required
+@super_admin_required
 def sync_all_bikes(request):
     """Sync all bikes from Firebase to PostgreSQL"""
     sync_service = BikeSyncService()

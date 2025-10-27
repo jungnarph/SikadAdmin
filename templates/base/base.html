@@ -577,14 +577,16 @@
                 </li>
                 
             </ul>
+            {% if request.user.role == 'SUPER_ADMIN' %}
             <div class="sidebar-divider"></div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link" href="#">
-                        <i class="fas fa-cog"></i> Settings
+                    <a class="nav-link" href="{% url 'admin:index' %}">
+                        <i class="fas fa-shield-alt"></i> Django Admin
                     </a>
                 </li>
             </ul>
+            {% endif %}
         </div>
     </nav>
 

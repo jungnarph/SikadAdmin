@@ -7,10 +7,13 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
 
+from apps.accounts.decorators import support_or_higher_required, super_admin_required
+
 from .models import SupportRequest
 
 
 @login_required
+@support_or_higher_required
 def support_request_list(request):
     """Displays a list of all support requests."""
     support_requests_queryset = SupportRequest.objects.select_related('customer').order_by('-timestamp')
@@ -39,6 +42,7 @@ def support_request_list(request):
 
 
 @login_required
+@support_or_higher_required
 def support_request_detail(request, request_firebase_id):
     """Displays details for a single support request."""
     support_request = get_object_or_404(
@@ -50,6 +54,7 @@ def support_request_detail(request, request_firebase_id):
 
 
 @login_required
+@super_admin_required
 def sync_support_requests(request):
     """Sync all support requests from Firebase to PostgreSQL"""
     try:

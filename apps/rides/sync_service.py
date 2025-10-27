@@ -431,7 +431,6 @@ class RideSyncService:
                             stats['created'] += 1
                         else:
                             stats['updated'] += 1
-                        stats['processed'] += 1
                     else:
                         stats['failed'] += 1
                 else:

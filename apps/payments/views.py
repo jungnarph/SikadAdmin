@@ -12,6 +12,7 @@ from django.db.models import Q
 from .models import Payment
 from .forms import PaymentFilterForm
 from .sync_service import PaymentSyncService
+from apps.accounts.decorators import super_admin_required
 
 @login_required
 def payment_list(request):
@@ -63,6 +64,7 @@ def payment_list(request):
     return render(request, 'payments/payment_list.html', context)
 
 @login_required
+@super_admin_required
 def sync_all_payments(request):
     """
     Triggers the sync process for all payments from Firebase.

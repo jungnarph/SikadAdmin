@@ -6,6 +6,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.contrib import messages
+from django.db.models import Q
+from apps.accounts.decorators import super_admin_required
 
 from apps.rides.sync_service import RideSyncService
 from .models import Ride
@@ -39,6 +41,7 @@ def ride_detail(request, ride_firebase_id):
     return render(request, 'rides/ride_detail.html', context) # Assumes template exists
 
 @login_required
+@super_admin_required
 def sync_all_rides(request):
     """Sync all zones from Firebase to PostgreSQL"""
     sync_service = RideSyncService()
