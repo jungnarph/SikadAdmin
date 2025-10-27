@@ -23,6 +23,7 @@ urlpatterns = [
     path('customers/', include('apps.customers.urls')),
     path('payments/', include('apps.payments.urls')),
     path('rides/', include('apps.rides.urls')),
+    path('support/', include('apps.support.urls')),
     
     # Root redirect to dashboard
     path('', RedirectView.as_view(url='/dashboard/', permanent=False)),

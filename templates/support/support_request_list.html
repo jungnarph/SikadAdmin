@@ -1,0 +1,279 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Support Requests - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="fas fa-headset"></i> Support Requests</h1>
+        <p class="text-muted">View and manage customer support requests</p>
+    </div>
+    <div>
+        <a href="{% url 'support:sync_support_requests' %}" class="btn btn-primary me-2">
+            <i class="fas fa-sync"></i> Sync from Firebase
+        </a>
+    </div>
+</div>
+
+<!-- Filters Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label for="status" class="form-label">Status</label>
+                <select name="status" id="status" class="form-control">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="priority" class="form-label">Priority</label>
+                <select name="priority" id="priority" class="form-control">
+                    <option value="">All Priorities</option>
+                    {% for value, label in priority_choices %}
+                    <option value="{{ value }}" {% if current_priority == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'support:support_request_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Total Requests</h6>
+                        <h2 class="mb-0">{{ support_requests.paginator.count }}</h2>
+                    </div>
+                    <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #ffc107;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Pending</h6>
+                        <h2 class="mb-0 text-warning">-</h2>
+                    </div>
+                    <div class="text-warning" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #17a2b8;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">In Progress</h6>
+                        <h2 class="mb-0 text-info">-</h2>
+                    </div>
+                    <div class="text-info" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card" style="border-left-color: #28a745;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Resolved</h6>
+                        <h2 class="mb-0 text-success">-</h2>
+                    </div>
+                    <div class="text-success" style="font-size: 3rem; opacity: 0.2;">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Support Requests Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">All Support Requests</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Request ID</th>
+                        <th>Customer</th>
+                        <th>Issue</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for request in support_requests %}
+                    <tr>
+                        <td>
+                            <small class="text-muted">{{ request.firebase_id|truncatechars:12 }}</small>
+                            {% if request.test_id %}
+                            <br><small class="badge bg-secondary">{{ request.test_id|truncatechars:15 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.customer %}
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-2" style="width: 35px; height: 35px; font-size: 14px;">
+                                    {{ request.customer.name.0|default:'U'|upper }}
+                                </div>
+                                <div>
+                                    <strong>{{ request.customer.name|default:"Unknown" }}</strong><br>
+                                    <small class="text-muted">{{ request.customer.email|truncatechars:20|default:"N/A" }}</small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Unknown Customer</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="max-width: 300px;">
+                                {{ request.issue|truncatechars:80 }}
+                            </div>
+                            {% if request.app_version %}
+                            <small class="text-muted">App: v{{ request.app_version }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.priority == 'critical' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-exclamation-circle"></i> Critical
+                                </span>
+                            {% elif request.priority == 'high' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle"></i> High
+                                </span>
+                            {% elif request.priority == 'medium' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-info-circle"></i> Medium
+                                </span>
+                            {% elif request.priority == 'low' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-arrow-down"></i> Low
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ request.get_priority_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-clock"></i> Pending
+                                </span>
+                            {% elif request.status == 'in_progress' %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-tasks"></i> In Progress
+                                </span>
+                            {% elif request.status == 'resolved' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Resolved
+                                </span>
+                            {% elif request.status == 'closed' %}
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-archive"></i> Closed
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ request.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.assigned_to %}
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-user"></i> {{ request.assigned_to|truncatechars:15 }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if request.submission_datetime %}
+                                <small>{{ request.submission_datetime|date:"M d, Y" }}</small><br>
+                                <small class="text-muted">{{ request.submission_datetime|date:"H:i" }}</small>
+                            {% else %}
+                                <small class="text-muted">N/A</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'support:support_request_detail' request.firebase_id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="fas fa-headset fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No support requests found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if support_requests.has_other_pages %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if support_requests.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ support_requests.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}">Previous</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ support_requests.number }} of {{ support_requests.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if support_requests.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ support_requests.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ support_requests.paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_priority %}&priority={{ current_priority }}{% endif %}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

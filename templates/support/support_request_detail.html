@@ -1,0 +1,354 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Support Request {{ support_request.firebase_id|truncatechars:12 }} - Sikad Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'support:support_request_list' %}" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="fas fa-arrow-left"></i> Back to Support Requests
+            </a>
+            <h1><i class="fas fa-headset"></i> Support Request Details</h1>
+            <p class="text-muted">Request ID: {{ support_request.firebase_id }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <!-- Status Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Request Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3 text-center">
+                    {% if support_request.status == 'pending' %}
+                        <span class="badge bg-warning text-dark px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-clock"></i> Pending
+                        </span>
+                    {% elif support_request.status == 'in_progress' %}
+                        <span class="badge bg-info px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-tasks"></i> In Progress
+                        </span>
+                    {% elif support_request.status == 'resolved' %}
+                        <span class="badge bg-success px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-check-circle"></i> Resolved
+                        </span>
+                    {% elif support_request.status == 'closed' %}
+                        <span class="badge bg-secondary px-3 py-2" style="font-size: 1rem;">
+                            <i class="fas fa-archive"></i> Closed
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary px-3 py-2" style="font-size: 1rem;">
+                            {{ support_request.get_status_display }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Priority:</strong></label>
+                    <div>
+                        {% if support_request.priority == 'critical' %}
+                            <span class="badge bg-danger" style="font-size: 0.9rem;">
+                                <i class="fas fa-exclamation-circle"></i> Critical
+                            </span>
+                        {% elif support_request.priority == 'high' %}
+                            <span class="badge bg-warning text-dark" style="font-size: 0.9rem;">
+                                <i class="fas fa-exclamation-triangle"></i> High
+                            </span>
+                        {% elif support_request.priority == 'medium' %}
+                            <span class="badge bg-info" style="font-size: 0.9rem;">
+                                <i class="fas fa-info-circle"></i> Medium
+                            </span>
+                        {% elif support_request.priority == 'low' %}
+                            <span class="badge bg-secondary" style="font-size: 0.9rem;">
+                                <i class="fas fa-arrow-down"></i> Low
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary" style="font-size: 0.9rem;">
+                                {{ support_request.get_priority_display }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Assigned To:</strong></label>
+                    <p class="mb-0">
+                        {% if support_request.assigned_to %}
+                            <span class="badge bg-primary">
+                                <i class="fas fa-user"></i> {{ support_request.assigned_to }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted">Unassigned</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label"><strong>Submission Time:</strong></label>
+                    <p class="mb-0">
+                        {% if support_request.submission_datetime %}
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ support_request.submission_datetime|date:"M d, Y H:i" }}
+                        {% elif support_request.submission_time %}
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ support_request.submission_time }}
+                        {% else %}
+                            <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                {% if support_request.app_version %}
+                <div class="mb-3">
+                    <label class="form-label"><strong>App Version:</strong></label>
+                    <p class="mb-0">
+                        <span class="badge bg-secondary">v{{ support_request.app_version }}</span>
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if support_request.test_id %}
+                <div class="mb-3">
+                    <label class="form-label"><strong>Test ID:</strong></label>
+                    <p class="mb-0">
+                        <small class="text-muted">{{ support_request.test_id }}</small>
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Customer Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Customer Information</h5>
+            </div>
+            <div class="card-body">
+                {% if support_request.customer %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="user-avatar me-3" style="width: 60px; height: 60px; font-size: 24px;">
+                            {{ support_request.customer.name.0|default:'U'|upper }}
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ support_request.customer.name|default:"Unknown" }}</h5>
+                            <small class="text-muted">{{ support_request.customer.email|default:"No email" }}</small>
+                        </div>
+                    </div>
+                    {% if support_request.customer.phone_number %}
+                    <div class="mb-2">
+                        <label class="form-label"><strong>Phone:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-phone text-muted"></i>
+                            {{ support_request.customer.phone_number }}
+                        </p>
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'customers:customer_detail' support_request.customer.firebase_id %}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-user"></i> View Customer Profile
+                    </a>
+                {% else %}
+                    <p class="text-muted mb-0">No customer information available</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <!-- Issue Description Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-circle"></i> Issue Description
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="p-3 bg-light rounded">
+                    {{ support_request.issue|linebreaks }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-reply"></i> Admin Response
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if support_request.response %}
+                    <div class="p-3 bg-light rounded">
+                        {{ support_request.response|linebreaks }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i> No response has been provided yet.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Timeline Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history"></i> Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-paper-plane"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Request Submitted</h6>
+                                <p class="text-muted mb-0">
+                                    {% if support_request.submission_datetime %}
+                                        {{ support_request.submission_datetime|date:"M d, Y H:i" }}
+                                    {% else %}
+                                        {{ support_request.submission_time|default:"N/A" }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if support_request.status == 'in_progress' or support_request.status == 'resolved' or support_request.status == 'closed' %}
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <div class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Status Changed to In Progress</h6>
+                                <p class="text-muted mb-0">
+                                    {{ support_request.updated_at|date:"M d, Y H:i" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if support_request.status == 'resolved' or support_request.status == 'closed' %}
+                    <div class="timeline-item mb-3">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Request Resolved</h6>
+                                <p class="text-muted mb-0">
+                                    {{ support_request.updated_at|date:"M d, Y H:i" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if support_request.status == 'closed' %}
+                    <div class="timeline-item">
+                        <div class="d-flex">
+                            <div class="me-3">
+                                <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    <i class="fas fa-archive"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">Request Closed</h6>
+                                <p class="text-muted mb-0">
+                                    {{ support_request.updated_at|date:"M d, Y H:i" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Metadata Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0">Metadata</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Firebase ID:</strong></label>
+                        <p class="mb-0">
+                            <small class="text-muted">{{ support_request.firebase_id }}</small>
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Timestamp:</strong></label>
+                        <p class="mb-0">
+                            {% if support_request.timestamp %}
+                                <small class="text-muted">{{ support_request.timestamp }}</small>
+                            {% else %}
+                                <small class="text-muted">N/A</small>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Created At:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ support_request.created_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label"><strong>Last Updated:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-calendar text-muted"></i>
+                            {{ support_request.updated_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                    <div class="col-md-12 mt-2">
+                        <label class="form-label"><strong>Last Synced:</strong></label>
+                        <p class="mb-0">
+                            <i class="fas fa-sync text-muted"></i>
+                            {{ support_request.synced_at|date:"M d, Y H:i" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .timeline {
+        position: relative;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 19px;
+        top: 40px;
+        height: calc(100% - 40px);
+        width: 2px;
+        background: #e9ecef;
+    }
+
+    .timeline-item:last-child::before {
+        display: none;
+    }
+</style>
+{% endblock %}
