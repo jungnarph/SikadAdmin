@@ -3,7 +3,7 @@ Django Admin for Geofencing
 """
 
 from django.contrib import admin
-from .models import Zone, ZoneViolation, ZonePerformance
+from .models import Zone, ZoneViolation
 
 
 @admin.register(Zone)
@@ -42,6 +42,7 @@ class ZoneAdmin(admin.ModelAdmin):
 @admin.register(ZoneViolation)
 class ZoneViolationAdmin(admin.ModelAdmin):
     list_display = [
+        'id',
         'zone',
         'bike_id',
         'customer_id',
@@ -83,36 +84,3 @@ class ZoneViolationAdmin(admin.ModelAdmin):
         queryset.update(resolved=True, resolved_at=timezone.now())
         self.message_user(request, f"{queryset.count()} violations marked as resolved.")
     mark_resolved.short_description = "Mark selected violations as resolved"
-
-
-@admin.register(ZonePerformance)
-class ZonePerformanceAdmin(admin.ModelAdmin):
-    list_display = [
-        'zone',
-        'performance_date',
-        'total_rentals',
-        'total_violations',
-        'revenue_generated',
-        'unique_bikes'
-    ]
-    list_filter = ['performance_date']
-    search_fields = ['zone__name']
-    readonly_fields = ['zone', 'performance_date', 'created_at']
-    
-    fieldsets = (
-        ('Performance Summary', {
-            'fields': (
-                'zone',
-                'performance_date',
-                'total_rentals',
-                'total_violations',
-                'revenue_generated',
-                'unique_bikes',
-                'unique_customers'
-            )
-        }),
-        ('Metadata', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
