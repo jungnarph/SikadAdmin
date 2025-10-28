@@ -26,6 +26,7 @@ def dashboard(request):
     week_start = today_start - timedelta(days=today_start.weekday())
     month_start = today_start.replace(day=1)
     seven_days_ago = today_start - timedelta(days=6)
+    thirty_days_ago = today_start - timedelta(days=30)
 
     # --- Existing Bike/Zone Stats ---
     total_bikes = Bike.objects.count()
@@ -109,6 +110,26 @@ def dashboard(request):
             'revenue': revenue_by_day.get(day_str, 0.0) # Get revenue or 0.0
         })
 
+    # --- NEW: System Performance (Most/Least Used Bikes - Last 30 Days) ---
+    # Annotate Bike objects with their ride count in the last 30 days
+    # We filter rides first, then group by bike, count, and order.
+    # Exclude archived bikes from consideration.
+    bike_usage_stats = Ride.objects.filter(
+        start_time__gte=thirty_days_ago,
+        bike__isnull=False, # Ensure the ride is linked to a bike
+        # bike__status__ne='ARCHIVED' # <--- This was the error
+    ).exclude( # <--- Use exclude here
+        bike__status='ARCHIVED' # Exclude rides from archived bikes
+    ).values(
+        'bike__firebase_id', 'bike__bike_model' # Group by bike ID and model
+    ).annotate(
+        ride_count=Count('id') # Count rides for each bike
+    ).order_by('-ride_count') # Order by ride count descending
+
+    most_used_bikes = list(bike_usage_stats[:5]) # Top 5
+    least_used_bikes_queryset = bike_usage_stats.order_by('ride_count') # Order ascending for least used
+    least_used_bikes = list(least_used_bikes_queryset[:5]) # Bottom 5
+
 
     # --- Context Dictionary ---
     context = {
@@ -134,7 +155,11 @@ def dashboard(request):
         'revenue_today': revenue_today,
         'revenue_this_week': revenue_this_week,
         'revenue_this_month': revenue_this_month,
-        'daily_revenue_trend_data_json': json.dumps(daily_revenue_trend_data), # Pass as JSON
+        'daily_revenue_trend_data_json': json.dumps(daily_revenue_trend_data),
+        
+        'most_used_bikes': most_used_bikes,
+        'least_used_bikes': least_used_bikes,
+        'bike_usage_period_days': 30,
     }
 
     return render(request, 'dashboard/dashboard.html', context)

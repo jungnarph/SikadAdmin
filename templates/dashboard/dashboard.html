@@ -5,20 +5,81 @@
 
 {% block extra_css %}
 <style>
-    /* ... (existing styles remain the same) ... */
     .stat-card {
         transition: all 0.3s ease;
     }
+
     .stat-card:hover {
         transform: translateY(-5px);
     }
+
     .stat-icon {
-        font-size: 2.5rem; /* Slightly smaller icons */
+        font-size: 2.5rem;
         opacity: 0.15;
     }
-    /* Add specific color classes if needed */
+
+    .progress-bar-animated {
+        animation: progress-bar-stripes 1s linear infinite;
+    }
+
+    .activity-item {
+        border-left: 3px solid #e9ecef;
+        padding-left: 15px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: -7px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #28a745;
+        border: 2px solid white;
+    }
+
+    .activity-item.warning::before {
+        background: #ffc107;
+    }
+
+    .activity-item.danger::before {
+        background: #dc3545;
+    }
+
     .text-revenue { color: #20c997; } /* Teal for revenue */
     .border-left-revenue { border-left: 4px solid #20c997 !important; }
+
+    .bike-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #eee;
+        font-size: 0.9rem;
+    }
+    .bike-list-item:last-child {
+        border-bottom: none;
+    }
+    .bike-list-item .bike-id {
+        font-weight: 600;
+        color: #333;
+    }
+     .bike-list-item .bike-model {
+        color: #666;
+        font-size: 0.8em;
+    }
+    .bike-list-item .ride-count {
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 4px;
+        min-width: 40px; /* Ensure alignment */
+        text-align: center;
+    }
+    .most-used .ride-count { background-color: #d4edda; color: #155724; } /* Green */
+    .least-used .ride-count { background-color: #f8d7da; color: #721c24; } /* Red */
 
 </style>
 {% endblock %}
@@ -213,43 +274,84 @@
 </div>
 
 <div class="row">
-    {# Recent Bikes #}
-    <div class="col-lg-6 mb-4"> {# Adjusted width #}
-        <div class="card">
+    <div class="col-lg-4 mb-4"> {# Adjusted to 3 columns #}
+        <div class="card h-100"> {# Added h-100 for equal height #}
             <div class="card-header">
-                <h5 class="mb-0">Recent Bikes Added</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy text-warning"></i> Most Used Bikes
+                    <small class="text-muted">(Last {{ bike_usage_period_days }} Days)</small>
+                </h5>
             </div>
             <div class="card-body">
-                {# ... (existing recent bikes code) ... #}
-                 {% for bike in recent_bikes %}
-                 {# ... #}
-                 {% empty %}
-                 {# ... #}
-                 {% endfor %}
+                {% if most_used_bikes %}
+                    {% for bike in most_used_bikes %}
+                    <div class="bike-list-item most-used">
+                        <div>
+                            <span class="bike-id">{{ bike.bike__firebase_id }}</span><br>
+                            <span class="bike-model">{{ bike.bike__bike_model|default:'N/A' }}</span>
+                        </div>
+                        <span class="ride-count">{{ bike.ride_count }} rides</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No ride data available for this period.</p>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    {# Active Zones #}
-    <div class="col-lg-6 mb-4"> {# Changed width #}
-        <div class="card">
+    <div class="col-lg-4 mb-4"> {# Adjusted to 3 columns #}
+        <div class="card h-100"> {# Added h-100 for equal height #}
             <div class="card-header">
-                <h5 class="mb-0">Active Zones</h5>
+                <h5 class="mb-0">
+                    <i class="fas fa-arrow-down text-danger"></i> Least Used Bikes
+                    <small class="text-muted">(Last {{ bike_usage_period_days }} Days)</small>
+                </h5>
             </div>
             <div class="card-body">
-                {# ... (existing active zones code) ... #}
-                {% for zone in active_zones %}
-                <div class="activity-item">
+                {% if least_used_bikes %}
+                    {% for bike in least_used_bikes %}
+                    <div class="bike-list-item least-used">
+                         <div>
+                            <span class="bike-id">{{ bike.bike__firebase_id }}</span><br>
+                            <span class="bike-model">{{ bike.bike__bike_model|default:'N/A' }}</span>
+                        </div>
+                        <span class="ride-count">{{ bike.ride_count }} rides</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No ride data available for this period.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 mb-4"> {# Adjusted to 3 columns #}
+        <div class="card h-100"> {# Added h-100 for equal height #}
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus-circle text-info"></i> Recent Bikes Added</h5>
+            </div>
+            <div class="card-body">
+                {# ... (Existing recent bikes list loop) ... #}
+                {% for bike in recent_bikes %}
+                <div class="activity-item"> {# Reusing activity item style #}
+                    <small class="text-muted">{{ bike.created_at|timesince }} ago</small>
                     <p class="mb-1">
-                        <strong>{{ zone.name }}</strong>
+                        <strong>{{ bike.firebase_id }}</strong> - {{ bike.bike_model }}
                     </p>
-                    <small class="text-muted">
-                        <span class="badge bg-info">Zone</span> {# Simplified badge #}
-                        <span class="ms-2">{{ zone.point_count }} points</span>
-                    </small>
+                    {# Updated badge classes #}
+                    {% if bike.status == 'AVAILABLE' %}
+                        <span class="badge bg-success">{{ bike.get_status_display }}</span>
+                    {% elif bike.status == 'IN_USE' %}
+                        <span class="badge bg-primary">{{ bike.get_status_display }}</span>
+                    {% elif bike.status == 'ARCHIVED' %}
+                        <span class="badge bg-secondary">{{ bike.get_status_display }}</span>
+                    {% else %}
+                        <span class="badge bg-danger">{{ bike.get_status_display }}</span>
+                    {% endif %}
                 </div>
                 {% empty %}
-                <p class="text-muted text-center py-3">No active zones</p>
+                <p class="text-muted text-center py-3">No recent bikes added</p>
                 {% endfor %}
             </div>
         </div>
