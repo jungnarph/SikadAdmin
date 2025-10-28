@@ -5,9 +5,37 @@ Syncs customer data from Firebase to PostgreSQL
 
 from .firebase_service import CustomerFirebaseService
 from .models import Customer
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def convert_firebase_timestamp(timestamp):
+    """
+    Convert Firebase timestamp (milliseconds) to Python datetime object
+
+    Args:
+        timestamp: Firebase timestamp in milliseconds (int) or datetime object
+
+    Returns:
+        datetime object or None if invalid
+    """
+    if timestamp is None:
+        return None
+
+    # If already a datetime object, return as-is
+    if isinstance(timestamp, datetime):
+        return timestamp
+
+    try:
+        # Firebase timestamps are in milliseconds, Python expects seconds
+        if isinstance(timestamp, (int, float)):
+            return datetime.fromtimestamp(timestamp / 1000.0)
+        return None
+    except (ValueError, OSError) as e:
+        logger.warning(f"Invalid timestamp value: {timestamp} - {e}")
+        return None
 
 
 class CustomerSyncService:
@@ -45,8 +73,8 @@ class CustomerSyncService:
                     'status': firebase_data.get('status', 'ACTIVE'),
                     'verification_status': firebase_data.get('verification_status', 'UNVERIFIED'),
                     'phone_verified': firebase_data.get('phone_verified', False),
-                    'registration_date': firebase_data.get('created_at'),
-                    'last_login': firebase_data.get('last_login'),
+                    'registration_date': convert_firebase_timestamp(firebase_data.get('createdAt')),
+                    'last_login': convert_firebase_timestamp(firebase_data.get('lastLoginTimestamp')),
                     'suspension_reason': firebase_data.get('suspension_reason', ''),
                 }
             )
@@ -103,8 +131,8 @@ class CustomerSyncService:
                             'profile_image_url': customer_data.get('profileImageUrl'),
                             'status': customer_data.get('status', 'ACTIVE'),
                             'phone_verified': customer_data.get('phoneVerified', False),
-                            'registration_date': customer_data.get('created_at'),
-                            'last_login': customer_data.get('lastLoginTimeStamp'),
+                            'registration_date': convert_firebase_timestamp(customer_data.get('createdAt')),
+                            'last_login': convert_firebase_timestamp(customer_data.get('lastLoginTimestamp')),
                             'suspension_reason': customer_data.get('suspension_reason', ''),
                         }
                     )
