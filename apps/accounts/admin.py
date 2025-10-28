@@ -4,7 +4,7 @@ Accounts Admin Configuration
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import AdminUser, Role, SessionTracking
+from .models import AdminUser, SessionTracking
 
 
 @admin.register(AdminUser)
@@ -29,14 +29,6 @@ class AdminUserAdmin(UserAdmin):
             'fields': ('username', 'password1', 'password2', 'role'),
         }),
     )
-
-
-@admin.register(Role)
-class RoleAdmin(admin.ModelAdmin):
-    """Admin for Role model"""
-    list_display = ['name', 'description', 'created_at']
-    search_fields = ['name', 'description']
-
 
 @admin.register(SessionTracking)
 class SessionTrackingAdmin(admin.ModelAdmin):
