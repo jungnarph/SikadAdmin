@@ -1,4 +1,3 @@
-# Updated content for jungnarph/sikadadmin/SikadAdmin-536c6c488986007128f3aeddc27af5ff3c51f130/apps/customers/models.py
 """
 Customer Models - PostgreSQL Analytics Models
 Primary data stored in Firebase, synced to PostgreSQL for analytics
@@ -59,8 +58,7 @@ class Customer(models.Model):
         default='UNVERIFIED'
     )
 
-    # Account Dates
-    # REMOVED: email_verified = models.BooleanField(default=False)
+    email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     registration_date = models.DateTimeField(null=True, blank=True)
     last_login = models.DateTimeField(null=True, blank=True)
@@ -100,7 +98,6 @@ class Customer(models.Model):
         ordering = ['-registration_date']
 
     def __str__(self):
-        # CHANGED: Use 'name' field
         return f"{self.name or self.email or self.firebase_id}"
 
     @property
