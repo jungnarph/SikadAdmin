@@ -3,7 +3,7 @@ Django Admin for Bikes
 """
 
 from django.contrib import admin
-from .models import Bike, BikeLocationHistory, BikePerformance
+from .models import Bike, BikeLocationHistory
 
 
 @admin.register(Bike)
@@ -56,36 +56,3 @@ class BikeLocationHistoryAdmin(admin.ModelAdmin):
     
     def has_change_permission(self, request, obj=None):
         return False
-
-
-@admin.register(BikePerformance)
-class BikePerformanceAdmin(admin.ModelAdmin):
-    list_display = [
-        'bike',
-        'performance_date',
-        'ride_count',
-        'total_distance',
-        'revenue_generated',
-        'utilization_rate'
-    ]
-    list_filter = ['performance_date']
-    search_fields = ['bike__firebase_id']
-    readonly_fields = ['bike', 'performance_date', 'created_at']
-    
-    fieldsets = (
-        ('Performance Summary', {
-            'fields': (
-                'bike',
-                'performance_date',
-                'ride_count',
-                'total_distance',
-                'total_duration',
-                'revenue_generated',
-                'utilization_rate'
-            )
-        }),
-        ('Metadata', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
-        }),
-    )
