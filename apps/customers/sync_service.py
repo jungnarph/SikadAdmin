@@ -62,6 +62,10 @@ class CustomerSyncService:
                 logger.warning(f"Customer {customer_id} not found in Firebase")
                 return False
             
+            phone_verified = firebase_data.get('phoneVerified', False)
+            email_verified = firebase_data.get('emailVerified', False)
+            verification_status = 'VERIFIED' if phone_verified and email_verified else 'UNVERIFIED'
+            
             # Update or create in PostgreSQL
             customer, created = Customer.objects.update_or_create(
                 firebase_id=customer_id,
@@ -71,8 +75,9 @@ class CustomerSyncService:
                     'name': firebase_data.get('name', ''),
                     'profile_image_url': firebase_data.get('profile_image_url'),
                     'status': firebase_data.get('status', 'ACTIVE'),
-                    'phone_verified': firebase_data.get('phoneVerified', False),
-                    'email_verified': firebase_data.get('emailVerified', False),
+                    'phone_verified': phone_verified,
+                    'email_verified': email_verified,
+                    'verification_status': verification_status,
                     'registration_date': convert_firebase_timestamp(firebase_data.get('createdAt')),
                     'last_login': convert_firebase_timestamp(firebase_data.get('lastLoginTimestamp')),
                     'suspension_reason': firebase_data.get('suspension_reason', ''),
@@ -121,6 +126,10 @@ class CustomerSyncService:
                 customer_id = None # Define outside try block for error logging
                 try:
                     customer_id = customer_data['firebase_id']
+
+                    phone_verified = customer_data.get('phoneVerified', False)
+                    email_verified = customer_data.get('emailVerified', False)
+                    verification_status = 'VERIFIED' if phone_verified and email_verified else 'UNVERIFIED'
                     
                     customer, created = Customer.objects.update_or_create(
                         firebase_id=customer_id,
@@ -130,7 +139,9 @@ class CustomerSyncService:
                             'name': customer_data.get('name', ''),
                             'profile_image_url': customer_data.get('profileImageUrl'),
                             'status': customer_data.get('status', 'ACTIVE'),
-                            'phone_verified': customer_data.get('phoneVerified', False),
+                            'phone_verified': phone_verified,
+                            'email_verified': email_verified,
+                            'verification_status': verification_status,
                             'registration_date': convert_firebase_timestamp(customer_data.get('createdAt')),
                             'last_login': convert_firebase_timestamp(customer_data.get('lastLoginTimestamp')),
                             'suspension_reason': customer_data.get('suspension_reason', ''),
