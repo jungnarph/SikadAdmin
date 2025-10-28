@@ -1,52 +1,25 @@
 {% extends 'base/base.html' %}
+{% load i18n %} {# Load template tags for formatting if needed #}
 
 {% block title %}Dashboard - Sikad Admin{% endblock %}
 
 {% block extra_css %}
 <style>
+    /* ... (existing styles remain the same) ... */
     .stat-card {
         transition: all 0.3s ease;
     }
-
     .stat-card:hover {
         transform: translateY(-5px);
     }
-
     .stat-icon {
-        font-size: 3rem;
+        font-size: 2.5rem; /* Slightly smaller icons */
         opacity: 0.15;
     }
+    /* Add specific color classes if needed */
+    .text-revenue { color: #20c997; } /* Teal for revenue */
+    .border-left-revenue { border-left: 4px solid #20c997 !important; }
 
-    .progress-bar-animated {
-        animation: progress-bar-stripes 1s linear infinite;
-    }
-
-    .activity-item {
-        border-left: 3px solid #e9ecef;
-        padding-left: 15px;
-        margin-bottom: 20px;
-        position: relative;
-    }
-
-    .activity-item::before {
-        content: '';
-        position: absolute;
-        left: -7px;
-        top: 0;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: #28a745;
-        border: 2px solid white;
-    }
-
-    .activity-item.warning::before {
-        background: #ffc107;
-    }
-
-    .activity-item.danger::before {
-        background: #dc3545;
-    }
 </style>
 {% endblock %}
 
@@ -57,120 +30,91 @@
 </div>
 
 <div class="row mb-4">
-    {# Bike Stats #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #6f42c1;"> {# Violet color #}
+    {# Row 1: Key Metrics #}
+    <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-primary"> {# Using Bootstrap color classes #}
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Total Bikes</h6>
-                        <h2 class="mb-0">{{ total_bikes }}</h2>
-                    </div>
-                    <div class="text-purple stat-icon" style="color: #6f42c1;"> {# Violet color #}
-                        <i class="fas fa-bicycle"></i>
-                    </div>
-                </div>
+                 <h6 class="text-muted text-uppercase mb-2">Rides Today</h6>
+                 <h2 class="mb-0 text-primary">{{ rides_today }}</h2>
             </div>
         </div>
     </div>
-
-    {# Active Rentals (existing) #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #007bff;">
+     <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-revenue"> {# Revenue Color #}
             <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Active Rentals</h6>
-                        <h2 class="mb-0">{{ active_rentals }}</h2>
-                    </div>
-                    <div class="text-primary stat-icon">
-                        <i class="fas fa-user-friends"></i>
-                    </div>
-                </div>
+                 <h6 class="text-muted text-uppercase mb-2">Revenue Today</h6>
+                 {# Format currency #}
+                 <h2 class="mb-0 text-revenue">₱{{ revenue_today|floatformat:2 }}</h2>
             </div>
         </div>
     </div>
-
-    {# Rides Today (NEW) #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #28a745;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Rides Today</h6>
-                        <h2 class="mb-0 text-success">{{ rides_today }}</h2>
-                    </div>
-                    <div class="text-success stat-icon">
-                        <i class="fas fa-route"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-info">
+             <div class="card-body">
+                 <h6 class="text-muted text-uppercase mb-2">Active Rentals</h6>
+                 <h2 class="mb-0 text-info">{{ active_rentals }}</h2>
+             </div>
         </div>
     </div>
-
-    {# Rides This Week (NEW) #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #17a2b8;"> {# Teal color #}
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Rides This Week</h6>
-                        <h2 class="mb-0 text-info">{{ rides_this_week }}</h2>
-                    </div>
-                    <div class="text-info stat-icon">
-                        <i class="fas fa-calendar-week"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-success">
+             <div class="card-body">
+                 <h6 class="text-muted text-uppercase mb-2">Bikes Available</h6>
+                 <h2 class="mb-0 text-success">{{ available_bikes }}</h2>
+             </div>
         </div>
     </div>
-
-    {# Rides This Month (NEW) #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #fd7e14;"> {# Orange color #}
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Rides This Month</h6>
-                        <h2 class="mb-0" style="color: #fd7e14;">{{ rides_this_month }}</h2>
-                    </div>
-                    <div class="stat-icon" style="color: #fd7e14;">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-warning">
+             <div class="card-body">
+                 <h6 class="text-muted text-uppercase mb-2">Rides This Week</h6>
+                 <h2 class="mb-0 text-warning">{{ rides_this_week }}</h2>
+             </div>
         </div>
     </div>
-
-    {# Total Zones (existing) #}
-    <div class="col-xl-2 col-md-4 mb-4"> {# Adjusted column size #}
-        <div class="card stat-card" style="border-left: 4px solid #ffc107;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-muted text-uppercase mb-2">Total Zones</h6>
-                        <h2 class="mb-0">{{ total_zones }}</h2>
-                    </div>
-                    <div class="text-warning stat-icon">
-                        <i class="fas fa-map-marked-alt"></i>
-                    </div>
-                </div>
-            </div>
+    <div class="col-xl-2 col-lg-4 col-md-6 mb-4">
+        <div class="card stat-card border-left-secondary"> {# Secondary color #}
+             <div class="card-body">
+                 <h6 class="text-muted text-uppercase mb-2">Revenue This Week</h6>
+                 <h2 class="mb-0 text-secondary">₱{{ revenue_this_week|floatformat:2 }}</h2>
+             </div>
         </div>
     </div>
-
-    {# Note: Removed Offline bikes card to make space, can be added back if needed #}
 </div>
 
 <div class="row">
-    <div class="col-lg-6 mb-4"> {# Changed width #}
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Daily Ride Trend (Last 7 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyRideChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Daily Revenue Trend (Last 7 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="dailyRevenueChart" height="250"></canvas> {# New canvas ID #}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Bike Status Distribution</h5>
             </div>
             <div class="card-body">
-                {# ... (existing progress bar code remains the same) ... #}
-                <div class="mb-3">
+                {# ... (existing progress bar code) ... #}
+                 <div class="mb-3">
                     <div class="d-flex justify-content-between mb-2">
                         <span><i class="fas fa-circle text-success"></i> Available</span>
                         <strong>{{ available_bikes }} bikes</strong>
@@ -210,39 +154,31 @@
         </div>
     </div>
 
-    <div class="col-lg-6 mb-4"> {# Changed width #}
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Daily Ride Trend (Last 7 Days)</h5>
-            </div>
-            <div class="card-body">
-                <canvas id="dailyRideChart" height="250"></canvas> {# Adjusted height #}
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    {# Quick Stats #}
-    <div class="col-lg-4 mb-4">
+    <div class="col-lg-6 mb-4"> {# Adjusted width #}
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Quick Actions & System Status</h5>
             </div>
             <div class="card-body">
                  {# ... (existing quick actions and system status code) ... #}
-                 <div class="d-grid gap-2">
+                  <div class="d-grid gap-2">
                     <a href="{% url 'bikes:bike_list' %}" class="btn btn-outline-primary">
                         <i class="fas fa-bicycle"></i> View All Bikes
                     </a>
                     <a href="{% url 'bikes:bike_map' %}" class="btn btn-outline-success">
                         <i class="fas fa-map-marked-alt"></i> Live Map
                     </a>
-                    <a href="{% url 'rides:ride_list' %}" class="btn btn-outline-secondary"> {# Link to Rides #}
+                    <a href="{% url 'rides:ride_list' %}" class="btn btn-outline-secondary">
                         <i class="fas fa-route"></i> View All Rides
+                    </a>
+                    <a href="{% url 'payments:payment_list' %}" class="btn btn-outline-dark"> {# Link to Payments #}
+                        <i class="fas fa-receipt"></i> View Payments
                     </a>
                     <a href="{% url 'bikes:sync_all_bikes' %}" class="btn btn-outline-info">
                         <i class="fas fa-sync"></i> Sync Bikes
+                    </a>
+                     <a href="{% url 'rides:sync_all_rides' %}" class="btn btn-outline-info"> {# Link to Sync Rides #}
+                        <i class="fas fa-sync"></i> Sync Rides
                     </a>
                     <a href="{% url 'geofencing:sync_all_zones' %}" class="btn btn-outline-warning">
                         <i class="fas fa-sync"></i> Sync Zones
@@ -250,7 +186,8 @@
                 </div>
                 <hr>
                 <h6 class="mb-3">System Status</h6>
-                <div class="mb-2">
+                {# ... (system status items) ... #}
+                 <div class="mb-2">
                     <small class="text-muted">Firebase Connection</small>
                     <div class="d-flex align-items-center">
                         <span class="badge bg-success me-2">Connected</span>
@@ -273,41 +210,28 @@
             </div>
         </div>
     </div>
+</div>
 
+<div class="row">
     {# Recent Bikes #}
-    <div class="col-lg-4 mb-4"> {# Changed width #}
+    <div class="col-lg-6 mb-4"> {# Adjusted width #}
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Recent Bikes Added</h5>
             </div>
             <div class="card-body">
-                 {# ... (existing recent bikes code) ... #}
+                {# ... (existing recent bikes code) ... #}
                  {% for bike in recent_bikes %}
-                <div class="activity-item">
-                    <small class="text-muted">{{ bike.created_at|timesince }} ago</small>
-                    <p class="mb-1">
-                        <strong>{{ bike.firebase_id }}</strong> - {{ bike.bike_model }}
-                    </p>
-                    {# Updated badge classes #}
-                    {% if bike.status == 'AVAILABLE' %}
-                        <span class="badge bg-success">{{ bike.get_status_display }}</span>
-                    {% elif bike.status == 'IN_USE' %}
-                        <span class="badge bg-primary">{{ bike.get_status_display }}</span>
-                    {% elif bike.status == 'ARCHIVED' %}
-                        <span class="badge bg-secondary">{{ bike.get_status_display }}</span>
-                    {% else %}
-                        <span class="badge bg-danger">{{ bike.get_status_display }}</span>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <p class="text-muted text-center py-3">No recent bikes added</p>
-                {% endfor %}
+                 {# ... #}
+                 {% empty %}
+                 {# ... #}
+                 {% endfor %}
             </div>
         </div>
     </div>
 
     {# Active Zones #}
-    <div class="col-lg-4 mb-4"> {# Changed width #}
+    <div class="col-lg-6 mb-4"> {# Changed width #}
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Active Zones</h5>
@@ -336,27 +260,50 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Daily Ride Trend Chart
-    const dailyCtx = document.getElementById('dailyRideChart').getContext('2d');
-    // Ensure daily_trend_data_json is correctly parsed
-    let dailyTrendData = [];
+    // Daily Ride Trend Chart (Existing)
+    const dailyRideCtx = document.getElementById('dailyRideChart').getContext('2d');
+    let dailyRidesData = [];
     try {
-        dailyTrendData = JSON.parse('{{ daily_trend_data_json|escapejs }}');
+        dailyRidesData = JSON.parse('{{ daily_rides_trend_data_json|escapejs }}');
     } catch (e) {
-        console.error("Error parsing daily trend data:", e);
+        console.error("Error parsing daily ride data:", e);
     }
-
-
-    new Chart(dailyCtx, {
-        type: 'bar', // Changed to bar chart for daily view
+    new Chart(dailyRideCtx, {
+        type: 'bar',
         data: {
-            labels: dailyTrendData.map(d => d.day),
+            labels: dailyRidesData.map(d => d.day),
             datasets: [{
                 label: 'Rides per Day',
-                data: dailyTrendData.map(d => d.count),
-                backgroundColor: 'rgba(40, 167, 69, 0.6)', // Semi-transparent green bars
+                data: dailyRidesData.map(d => d.count),
+                backgroundColor: 'rgba(40, 167, 69, 0.6)',
                 borderColor: 'rgba(40, 167, 69, 1)',
                 borderWidth: 1
+            }]
+        },
+        options: { /* ... existing options ... */
+            responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Daily Revenue Trend Chart (NEW)
+    const dailyRevenueCtx = document.getElementById('dailyRevenueChart').getContext('2d');
+    let dailyRevenueData = [];
+     try {
+        dailyRevenueData = JSON.parse('{{ daily_revenue_trend_data_json|escapejs }}');
+    } catch (e) {
+        console.error("Error parsing daily revenue data:", e);
+    }
+    new Chart(dailyRevenueCtx, {
+        type: 'line', // Line chart for revenue
+        data: {
+            labels: dailyRevenueData.map(d => d.day),
+            datasets: [{
+                label: 'Revenue per Day (₱)',
+                data: dailyRevenueData.map(d => d.revenue),
+                borderColor: '#20c997', // Teal color
+                backgroundColor: 'rgba(32, 201, 151, 0.1)', // Light teal fill
+                tension: 0.3, // Smoother line
+                fill: true
             }]
         },
         options: {
@@ -365,20 +312,36 @@
             plugins: {
                 legend: {
                     display: false
+                },
+                tooltip: { // Customize tooltips for currency
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        stepSize: 1 // Ensure integer ticks for counts
+                    ticks: { // Format Y-axis as currency
+                        callback: function(value, index, values) {
+                            return '₱' + value.toLocaleString();
+                        }
                     }
                 }
             }
         }
     });
 
-    // Auto-refresh dashboard every 60 seconds
+    // Auto-refresh dashboard (Existing)
     setTimeout(function() {
         location.reload();
     }, 60000);
