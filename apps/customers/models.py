@@ -66,7 +66,6 @@ class Customer(models.Model):
     # Statistics (calculated fields)
     total_rides = models.IntegerField(default=0)
     total_spent = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    account_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     # Administrative
     suspension_reason = models.TextField(blank=True)

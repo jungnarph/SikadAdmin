@@ -41,7 +41,7 @@ class CustomerAdmin(admin.ModelAdmin):
             'fields': ('status', 'verification_status', 'phone_verified')
         }),
         ('Statistics', {
-            'fields': ('total_rides', 'total_spent', 'account_balance'),
+            'fields': ('total_rides', 'total_spent'),
             'classes': ('collapse',)
         }),
         ('Suspension Info', {
