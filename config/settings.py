@@ -139,7 +139,7 @@ else:
 FIREBASE_API_KEY = config('FIREBASE_API_KEY', default='')
 FIREBASE_AUTH_DOMAIN = config('FIREBASE_AUTH_DOMAIN', default='')
 FIREBASE_PROJECT_ID = config('FIREBASE_PROJECT_ID', default='')
-FIREBASE_DATABASE_URL = config('FIREBASE_DATABASE_URL', default='https://cit306-finalproject-default-rtdb.firebaseio.com/'
+FIREBASE_DATABASE_URL = config('FIREBASE_DATABASE_URL', default='https://cit306-finalproject-default-rtdb.firebaseio.com/')
 
 # Logging
 LOGGING = {
