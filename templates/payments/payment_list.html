@@ -131,7 +131,6 @@
                         <th>Payment Type</th>
                         <th>Status</th>
                         <th>Payment Date</th>
-                        <th>Ride ID</th>
                         <th>Reference</th>
                     </tr>
                 </thead>
@@ -204,15 +203,6 @@
                         <td>
                             {% if payment.payment_date %}
                                 <small>{{ payment.payment_date|date:"M d, Y H:i" }}</small>
-                            {% else %}
-                                <small class="text-muted">N/A</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if payment.ride %}
-                                <small class="text-muted">
-                                    <i class="fas fa-bicycle"></i> {{ payment.ride.firebase_id|truncatechars:12 }}
-                                </small>
                             {% else %}
                                 <small class="text-muted">N/A</small>
                             {% endif %}
