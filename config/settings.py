@@ -3,6 +3,7 @@ Django settings for bike_sharing_admin project.
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 from decouple import config
 import firebase_admin
@@ -70,16 +71,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database - PostgreSQL
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='bike_sharing_db'),
-        'USER': config('DB_USER', default='postgres'),
-        'PASSWORD': config('DB_PASSWORD', default='postgres'),
-        'HOST': config('DB_HOST', default='localhost'),
-        'PORT': config('DB_PORT', default='5432'),
+if DEBUG :
+    print("Using PostgreSQL Database in Local")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='bike_sharing_db'),
+            'USER': config('DB_USER', default='postgres'),
+            'PASSWORD': config('DB_PASSWORD', default='postgres'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
     }
-}
+else:
+    print("Using PostgreSQL Database in Production")
+    DATABASES = {
+        'default': {
+            dj_database_url.parse(os.environ.get('DATABASE_URL'), conn_max_age=600),
+        }
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.AdminUser'
