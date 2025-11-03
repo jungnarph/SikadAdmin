@@ -28,7 +28,7 @@ class Bike(models.Model):
     
     STATUS_CHOICES = [
         ('AVAILABLE', 'Available'),
-        ('IN_USE', 'In Use'),
+        ('IN_RENT', 'In Rent'),
         ('OFFLINE', 'Offline'),
         ('ARCHIVED', 'Archived'),
     ]
