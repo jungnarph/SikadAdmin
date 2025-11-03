@@ -111,8 +111,7 @@ class BikeUpdateForm(forms.Form):
     
     STATUS_CHOICES = [
         ('AVAILABLE', 'Available'),
-        ('IN_USE', 'In Use'),
-        ('MAINTENANCE', 'Maintenance'),
+        ('IN_RENT', 'In Rent'),
         ('OFFLINE', 'Offline'),
     ]
     

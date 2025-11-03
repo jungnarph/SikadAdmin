@@ -116,7 +116,7 @@
         <div class="card">
             <div class="card-body py-2">
                 <small class="text-primary">In Use</small>
-                <h4 class="mb-0 text-primary" id="inUseBikes">0</h4>
+                <h4 class="mb-0 text-primary" id="inRentBikes">0</h4>
             </div>
         </div>
     </div>
@@ -154,8 +154,8 @@
                     </label>
                 </div>
                 <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showInUse" checked>
-                    <label class="form-check-label" for="showInUse">
+                    <input class="form-check-input" type="checkbox" id="showInRent" checked>
+                    <label class="form-check-label" for="showInRent">
                         <span style="color: #007bff;">●</span> In Use
                     </label>
                 </div>
@@ -226,7 +226,7 @@
     // Color mapping for bike status
     const statusColors = {
         'AVAILABLE': '#28a745',
-        'IN_USE': '#007bff',
+        'IN_RENT': '#007bff',
         'OFFLINE': '#dc3545'
     };
     
@@ -300,12 +300,12 @@
     // Function to check if bike should be shown based on filters
     function shouldShowBike(status) {
         const showAvailable = document.getElementById('showAvailable').checked;
-        const showInUse = document.getElementById('showInUse').checked;
+        const showInRent = document.getElementById('showInRent').checked;
         const showOffline = document.getElementById('showOffline').checked;
         
         return (
             (status === 'AVAILABLE' && showAvailable) ||
-            (status === 'IN_USE' && showInUse) ||
+            (status === 'IN_RENT' && showInRent) ||
             (status === 'OFFLINE' && showOffline)
         );
     }
@@ -322,13 +322,13 @@
         Object.values(bikeMarkers).forEach(bikeData => {
             stats.total++;
             if (bikeData.status === 'AVAILABLE') stats.available++;
-            else if (bikeData.status === 'IN_USE') stats.inUse++;
+            else if (bikeData.status === 'IN_RENT') stats.inRent++;
             else if (bikeData.status === 'OFFLINE') stats.offline++;
         });
         
         document.getElementById('totalBikes').textContent = stats.total;
         document.getElementById('availableBikes').textContent = stats.available;
-        document.getElementById('inUseBikes').textContent = stats.inUse;
+        document.getElementById('inRentBikes').textContent = stats.inRent;
         document.getElementById('offlineBikes').textContent = stats.offline;
         document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
     }
@@ -489,7 +489,7 @@
     
     // Add event listeners to checkboxes
     document.getElementById('showAvailable').addEventListener('change', filterBikes);
-    document.getElementById('showInUse').addEventListener('change', filterBikes);
+    document.getElementById('showInRent').addEventListener('change', filterBikes);
     document.getElementById('showOffline').addEventListener('change', filterBikes);
     document.getElementById('showZones').addEventListener('change', toggleZones);
     

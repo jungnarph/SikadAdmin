@@ -39,7 +39,7 @@ def bike_list(request):
         'bikes': bikes,
         'total_count': Bike.objects.count(),
         'available_count': Bike.objects.filter(status='AVAILABLE').count(),
-        'in_use_count': Bike.objects.filter(status='IN_USE').count(),
+        'in_rent_count': Bike.objects.filter(status='IN_RENT').count(),
         'offline_count': Bike.objects.filter(status='OFFLINE').count(),
     }
     
@@ -329,7 +329,7 @@ def bike_update_status(request, bike_id):
     if request.method == 'POST':
         new_status = request.POST.get('status')
         
-        if new_status not in ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'OFFLINE']:
+        if new_status not in ['AVAILABLE', 'IN_RENT', 'OFFLINE']:
             return JsonResponse({'success': False, 'error': 'Invalid status'})
         
         firebase_service = BikeFirebaseService()
