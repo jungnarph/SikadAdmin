@@ -55,7 +55,7 @@ def sync_all_rides(request):
     """
     
     # Define a safe batch size that won't time out
-    QUICK_SYNC_BATCH_SIZE = 100 
+    QUICK_SYNC_BATCH_SIZE = 30 
     
     try:
         # 1. Find the start_time of the most recent ride we have in our database.

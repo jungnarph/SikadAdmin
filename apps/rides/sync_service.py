@@ -414,38 +414,28 @@ class RideSyncService:
             logger.error(f"Error syncing ride {ride_id}: {e}", exc_info=True)
             return False, False
 
-    def sync_all_rides(
-        self,
-        limit: int = 1000,
-        start_after_timestamp: Optional[datetime] = None,
-        order_by: str = 'startTime',
-        direction: str = 'ASCENDING' # Sync oldest-to-newest for failsafe
-    ) -> dict:
+    def sync_all_rides(self, limit: int = 1000, start_after_timestamp: Optional[datetime] = None, order_by: str = 'startTime', direction: str = 'ASCENDING') -> dict:
         """
-        Syncs a batch of rides from Firebase to PostgreSQL
-        using efficient bulk operations, starting after a given timestamp.
+        Sync multiple rides from Firebase to PostgreSQL.
         """
-        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0, 'processed': 0}
+        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0}
         try:
-            logger.info(f"Starting ride batch sync. Limit: {limit}, After: {start_after_timestamp}")
-            
-            # 1. Fetch a batch of ride data from Firebase
-            # We sort by ASCENDING (oldest first) to sync in chronological order
+            logger.info(f"Starting bulk ride sync with limit {limit}, After: {start_after_timestamp}")
             rides_data = self.firebase_service.list_rides(
                 limit=limit,
                 start_after_timestamp=start_after_timestamp,
                 order_by=order_by,
                 direction=direction
             )
+
             stats['total'] = len(rides_data)
-            
+
             if not rides_data:
                 logger.info("No new rides found in Firebase to sync for this batch.")
                 return stats
+            
+            logger.info(f"Fetched {stats['total']} rides from Firebase. Beginning sync...")
 
-            logger.info(f"Fetched {stats['total']} rides from Firebase. Mapping data...")
-
-            # 2. Pre-cache existing data from your Postgres DB to avoid N+1 lookups
             all_ride_ids = {r['firebase_id'] for r in rides_data if 'firebase_id' in r}
             all_customer_ids = {r.get('userId') for r in rides_data if r.get('userId')}
             all_bike_ids = {r.get('bikeId') for r in rides_data if r.get('bikeId')}
@@ -468,8 +458,7 @@ class RideSyncService:
 
             rides_to_create = []
             rides_to_update = []
-            
-            # 3. Process data in memory
+
             for ride_data in rides_data:
                 ride_id = ride_data.get('firebase_id')
                 if not ride_id:
