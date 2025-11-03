@@ -9,6 +9,8 @@ from django.apps import apps # To get models from string paths
 from datetime import datetime
 import logging
 from django.utils.timezone import make_aware # To handle timezone warnings
+from django.db import transaction
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -181,47 +183,111 @@ class PaymentSyncService:
             logger.error(f"Error syncing payment {payment_id}: {e}", exc_info=True)
             return False
 
-    def sync_all_payments(self, limit: int = 1000) -> dict:
+    def sync_all_payments(
+        self,
+        limit: int = 1000,
+        start_after_timestamp: Optional[datetime] = None,
+        order_by: str = 'paymentDate', # Match Firebase service
+        direction: str = 'ASCENDING'   # Sync oldest-to-newest
+    ) -> dict:
         """
-        Sync multiple payments from Firebase to PostgreSQL.
-
-        Args:
-            limit: Maximum number of payments to fetch from Firebase in one go.
-
-        Returns:
-            Dictionary with sync statistics.
+        Syncs a batch of payments from Firebase to PostgreSQL
+        using efficient bulk operations, starting after a given timestamp.
         """
-        stats = {
-            'total': 0,
-            'processed': 0, # Successfully synced (created or updated)
-            'failed': 0
-        }
+        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0, 'processed': 0}
         try:
-            logger.info(f"Starting bulk payment sync with limit {limit}")
+            logger.info(f"Starting payment batch sync. Limit: {limit}, After: {start_after_timestamp}")
             
-            # Fetch payments from Firebase
-            firebase_payments = self.firebase_service.list_payments(limit=limit)
+            # 1. Fetch a batch of payment data from Firebase
+            firebase_payments = self.firebase_service.list_payments(
+                limit=limit,
+                start_after_timestamp=start_after_timestamp,
+                order_by=order_by,
+                direction=direction
+            )
             stats['total'] = len(firebase_payments)
             
-            logger.info(f"Fetched {stats['total']} payments from Firebase. Beginning sync...")
+            if not firebase_payments:
+                logger.info("No new payments found in Firebase to sync for this batch.")
+                return stats
 
+            logger.info(f"Fetched {stats['total']} payments from Firebase. Mapping data...")
+
+            # 2. Pre-cache existing data from your Postgres DB
+            all_payment_ids = {p['firebase_id'] for p in firebase_payments if 'firebase_id' in p}
+            all_customer_ids = {p.get('uid') for p in firebase_payments if p.get('uid')}
+            
+            # We also need to find associated rides. This is tricky.
+            # We'll pre-fetch rides that are in our DB.
+            # Note: _get_ride_ids_for_payment is still N+1 on Firebase,
+            # but we are fixing the DB timeout first.
+            
+            existing_payments_map = {
+                str(p.firebase_id): p 
+                for p in Payment.objects.filter(firebase_id__in=all_payment_ids)
+            }
+            customers_map = {
+                str(c.firebase_id): c 
+                for c in self.CustomerModel.objects.filter(firebase_id__in=all_customer_ids)
+            }
+            
+            logger.info(f"Pre-cached {len(existing_payments_map)} existing payments, {len(customers_map)} customers from DB.")
+
+            payments_to_create = []
+            payments_to_update = []
+            
+            # 3. Process data in memory
             for fb_payment_data in firebase_payments:
                 payment_id = fb_payment_data.get('firebase_id')
                 if not payment_id:
                     stats['failed'] += 1
-                    logger.warning("Found Firebase payment data without an ID. Skipping.")
                     continue
+                
+                try:
+                    # This map function still makes N+1 calls to Firebase
+                    # to find the ride_id. This is a known bottleneck.
+                    mapped_data = self._map_firebase_to_django(fb_payment_data)
+                    
+                    # Manually link customer from our cache (override map)
+                    mapped_data['customer'] = customers_map.get(fb_payment_data.get('uid'))
+                    
+                    # (The 'ride' link is complex and slow, we accept its slowness for now
+                    # as it's a Firebase N+1, not a DB N+1)
 
-                if self.sync_single_payment(payment_id):
-                    stats['processed'] += 1
-                else:
+                    if payment_id in existing_payments_map:
+                        # Prepare for UPDATE
+                        payment_obj = existing_payments_map[payment_id]
+                        for key, value in mapped_data.items():
+                            setattr(payment_obj, key, value)
+                        payments_to_update.append(payment_obj)
+                    else:
+                        # Prepare for CREATE
+                        mapped_data['firebase_id'] = payment_id
+                        payments_to_create.append(Payment(**mapped_data))
+                        
+                except Exception as e:
+                    logger.error(f"Error mapping payment {payment_id}: {e}", exc_info=True)
                     stats['failed'] += 1
 
-            logger.info(f"Payment sync completed: Processed {stats['processed']}, Failed {stats['failed']} out of {stats['total']} fetched.")
+            # 4. Perform bulk database operations in a single transaction
+            logger.info(f"Performing bulk operations. Creating: {len(payments_to_create)}, Updating: {len(payments_to_update)}")
+            with transaction.atomic():
+                if payments_to_create:
+                    Payment.objects.bulk_create(payments_to_create, batch_size=500, ignore_conflicts=True)
+                    stats['created'] = len(payments_to_create)
+                
+                if payments_to_update:
+                    model_fields = [f.name for f in Payment._meta.fields if f.name not in ['id', 'firebase_id']]
+                    Payment.objects.bulk_update(payments_to_update, model_fields, batch_size=500)
+                    stats['updated'] = len(payments_to_update)
+
+            logger.info("Bulk database operations complete.")
+            stats['processed'] = stats['created'] + stats['updated']
             return stats
 
         except Exception as e:
             logger.error(f"Error during bulk payment sync: {e}", exc_info=True)
+            stats['error'] = str(e)
             return stats
 
     def sync_payments_for_customer(self, customer_firebase_id: str, limit: int = 100) -> dict:

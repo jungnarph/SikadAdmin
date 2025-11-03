@@ -13,6 +13,10 @@ from .models import Payment
 from .forms import PaymentFilterForm
 from .sync_service import PaymentSyncService
 from apps.accounts.decorators import super_admin_required
+import logging
+from django.db.models import Max
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def payment_list(request):
@@ -67,27 +71,55 @@ def payment_list(request):
 @super_admin_required
 def sync_all_payments(request):
     """
-    Triggers the sync process for all payments from Firebase.
-    Redirects back to the payment list with a status message.
+    Triggers a QUICK, BATCHED sync from the web.
+    
+    This is a "failsafe" sync that only processes a small batch
+    of the oldest unsynced payments to prevent a web timeout.
     """
-    sync_service = PaymentSyncService()
-    stats = sync_service.sync_all_payments() # Assuming a limit or fetching all
+    
+    # Define a safe batch size that won't time out
+    QUICK_SYNC_BATCH_SIZE = 100 
+    
+    try:
+        # 1. Find the payment_date of the most recent payment we have.
+        latest_payment = Payment.objects.order_by('-payment_date').first()
+        start_after = latest_payment.payment_date if latest_payment else None
 
-    messages.success(
-        request,
-        f'Sync initiated. Attempted to sync {stats.get("total", 0)} payments: '
-        f'{stats.get("created", 0)} created/updated, {stats.get("failed", 0)} failed. '
-        f'Check logs for details.'
-    )
+        if start_after:
+            logger.info(f"Quick Sync: Found last payment sync point at {start_after}")
+        else:
+            logger.info("Quick Sync: No payments found, syncing from beginning.")
 
+        # 2. Call the sync service for one small batch
+        sync_service = PaymentSyncService()
+        stats = sync_service.sync_all_payments(
+            limit=QUICK_SYNC_BATCH_SIZE,
+            start_after_timestamp=start_after,
+            order_by='paymentDate', # Match Firebase field
+            direction='ASCENDING'   # Sync oldest-to-newest
+        )
+        
+        created = stats.get("created", 0)
+        updated = stats.get("updated", 0)
+        
+        if created > 0 or updated > 0:
+            messages.success(
+                request,
+                f'✓ Quick sync complete: {created} new payments created, {updated} payments updated.'
+            )
+        elif stats.get('total', 0) == 0 and start_after:
+             messages.info(
+                request,
+                'Your database is already up-to-date. No new payments found.'
+            )
+        else:
+             messages.warning(
+                request,
+                f'Sync ran but no changes were made. Failed: {stats.get("failed", 0)}.'
+            )
+
+    except Exception as e:
+        logger.error(f"Error during quick sync view: {e}", exc_info=True)
+        messages.error(request, f"An error occurred: {e}")
+    
     return redirect('payments:payment_list')
-
-# Note: A payment_detail view might not be strictly necessary if all relevant info
-# is in the list and linked models (Customer, Ride), but could be added if needed.
-
-# Example placeholder for a detail view if desired later:
-# @login_required
-# def payment_detail(request, payment_firebase_id):
-#     payment = get_object_or_404(Payment.objects.select_related('customer', 'ride'), firebase_id=payment_firebase_id)
-#     context = {'payment': payment}
-#     return render(request, 'payments/payment_detail.html', context)

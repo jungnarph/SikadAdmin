@@ -131,7 +131,7 @@ class PaymentFirebaseService:
             logger.error(f"Error fetching payment {payment_id} from Firebase: {e}", exc_info=True)
             return None
 
-    def list_payments(self, limit: int = 1000, start_after_doc=None) -> List[Dict]:
+    def list_payments(self, limit: int = 1000, start_after_doc=None, order_by: str = 'paymentDate', direction: str = 'DESCENDING', start_after_timestamp: Optional[datetime] = None) -> List[Dict]:
         """
         List payment records from Firebase, ordered by date descending.
 
@@ -142,6 +142,13 @@ class PaymentFirebaseService:
         Returns:
             List of payment dictionaries.
         """
+        query = self.collection
+        
+        if start_after_timestamp:
+                logger.info(f"Querying for payments starting after: {start_after_timestamp}")
+                # Firestore query: field > timestamp
+                query = query.where(order_by, '>', start_after_timestamp)
+
         try:
             # Try to order by paymentDate first, but be flexible if it doesn't exist
             try:
