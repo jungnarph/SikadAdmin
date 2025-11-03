@@ -55,8 +55,8 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h6 class="text-muted mb-2">In Use</h6>
-                        <h2 class="mb-0 text-primary">{{ in_use_count }}</h2>
+                        <h6 class="text-muted mb-2">In Rent</h6>
+                        <h2 class="mb-0 text-primary">{{ in_rent_count }}</h2>
                     </div>
                     <div class="text-primary" style="font-size: 3rem; opacity: 0.2;">
                         <i class="fas fa-user-check"></i>
@@ -91,8 +91,7 @@
                 <select name="status" class="form-select">
                     <option value="">All Status</option>
                     <option value="AVAILABLE">Available</option>
-                    <option value="IN_USE">In Use</option>
-                    <option value="MAINTENANCE">Maintenance</option>
+                    <option value="IN_RENT">In Rent</option>
                     <option value="OFFLINE">Offline</option>
                 </select>
             </div>
@@ -152,8 +151,8 @@
                         <td>
                             {% if bike.status == 'AVAILABLE' %}
                                 <span class="badge badge-available">Available</span>
-                            {% elif bike.status == 'IN_USE' %}
-                                <span class="badge badge-rented">In Use</span>
+                            {% elif bike.status == 'IN_RENT' %}
+                                <span class="badge badge-rented">In Rent</span>
                             {% elif bike.status == 'ARCHIVED' %}
                                 <span class="badge bg-secondary">Archived</span>
                             {% else %}

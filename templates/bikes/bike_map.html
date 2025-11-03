@@ -81,6 +81,195 @@
         margin-bottom: 10px;
         color: #495057;
     }
+
+    /* Console Log Styles */
+    .console-container {
+        background: #1e1e1e;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        overflow: hidden;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    }
+
+    .console-header {
+        background: #2d2d2d;
+        padding: 12px 15px;
+        border-bottom: 1px solid #3e3e3e;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .console-header h5 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .console-controls {
+        display: flex;
+        gap: 8px;
+    }
+
+    .console-controls button {
+        background: #3e3e3e;
+        border: none;
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .console-controls button:hover {
+        background: #4e4e4e;
+    }
+
+    .console-body {
+        height: calc(57vh - 60px);
+        overflow-y: auto;
+        padding: 12px;
+        background: #1e1e1e;
+    }
+
+    .console-stats {
+        padding: 8px 12px;
+        background: #2d2d2d;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .console-body::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .console-body::-webkit-scrollbar-track {
+        background: #2d2d2d;
+    }
+
+    .console-body::-webkit-scrollbar-thumb {
+        background: #4e4e4e;
+        border-radius: 4px;
+    }
+
+    .console-body::-webkit-scrollbar-thumb:hover {
+        background: #5e5e5e;
+    }
+
+    .console-log-entry {
+        padding: 6px 8px;
+        margin-bottom: 4px;
+        border-left: 3px solid transparent;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        border-radius: 2px;
+        word-wrap: break-word;
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .console-log-entry.geofence_cross {
+        background: rgba(255, 193, 7, 0.1);
+        border-left-color: #ffc107;
+        color: #ffc107;
+    }
+
+    .console-log-entry.low_battery {
+        background: rgba(255, 87, 34, 0.1);
+        border-left-color: #ff5722;
+        color: #ff5722;
+    }
+
+    .console-log-entry.maintenance {
+        background: rgba(33, 150, 243, 0.1);
+        border-left-color: #2196f3;
+        color: #2196f3;
+    }
+
+    .console-log-entry.theft {
+        background: rgba(244, 67, 54, 0.1);
+        border-left-color: #f44336;
+        color: #f44336;
+    }
+
+    .console-log-entry.speed_limit {
+        background: rgba(255, 152, 0, 0.1);
+        border-left-color: #ff9800;
+        color: #ff9800;
+    }
+
+    .console-log-entry.default {
+        background: rgba(158, 158, 158, 0.1);
+        border-left-color: #9e9e9e;
+        color: #e0e0e0;
+    }
+
+    .log-timestamp {
+        color: #888;
+        font-size: 0.75rem;
+        margin-right: 8px;
+    }
+
+    .log-bike-id {
+        color: #4fc3f7;
+        font-weight: 600;
+        margin-right: 8px;
+    }
+
+    .log-type {
+        color: #81c784;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        margin-right: 8px;
+        padding: 2px 6px;
+        background: rgba(129, 199, 132, 0.2);
+        border-radius: 3px;
+    }
+
+    .log-message {
+        color: #e0e0e0;
+    }
+
+    .log-location {
+        color: #ba68c8;
+        font-size: 0.75rem;
+        margin-top: 2px;
+        display: block;
+        padding-left: 16px;
+    }
+
+    .console-empty {
+        color: #666;
+        text-align: center;
+        padding: 40px 20px;
+        font-style: italic;
+    }
+
+    .alert-counter {
+        background: #f44336;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
 </style>
 {% endblock %}
 
@@ -115,7 +304,7 @@
     <div class="col-md-2">
         <div class="card">
             <div class="card-body py-2">
-                <small class="text-primary">In Use</small>
+                <small class="text-primary">In Rent</small>
                 <h4 class="mb-0 text-primary" id="inRentBikes">0</h4>
             </div>
         </div>
@@ -138,48 +327,86 @@
     </div>
 </div>
 
-<!-- Map Container -->
-<div class="card">
-    <div class="card-body position-relative">
-        <div id="liveMap"></div>
-        
-        <!-- Map Controls -->
-        <div class="map-controls">
-            <div class="control-section">
-                <h6><i class="fas fa-filter"></i> Filter Bikes</h6>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showAvailable" checked>
-                    <label class="form-check-label" for="showAvailable">
-                        <span style="color: #28a745;">●</span> Available
-                    </label>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showInRent" checked>
-                    <label class="form-check-label" for="showInRent">
-                        <span style="color: #007bff;">●</span> In Use
-                    </label>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showOffline" checked>
-                    <label class="form-check-label" for="showOffline">
-                        <span style="color: #dc3545;">●</span> Offline
-                    </label>
+<!-- Map and Console Side by Side -->
+<div class="row">
+    <!-- Map Container -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body position-relative">
+                <div id="liveMap"></div>
+
+                <!-- Map Controls -->
+                <div class="map-controls">
+                    <div class="control-section">
+                        <h6><i class="fas fa-filter"></i> Filter Bikes</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showAvailable" checked>
+                            <label class="form-check-label" for="showAvailable">
+                                <span style="color: #28a745;">●</span> Available
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showInRent" checked>
+                            <label class="form-check-label" for="showInRent">
+                                <span style="color: #007bff;">●</span> In Rent
+                            </label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showOffline" checked>
+                            <label class="form-check-label" for="showOffline">
+                                <span style="color: #dc3545;">●</span> Offline
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <h6><i class="fas fa-layer-group"></i> Zones</h6>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="showZones" checked>
+                            <label class="form-check-label" for="showZones">
+                                Show Geofence Zones
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-primary w-100" onclick="centerMap()">
+                        <i class="fas fa-crosshairs"></i> Center Map
+                    </button>
                 </div>
             </div>
-            
-            <div class="control-section">
-                <h6><i class="fas fa-layer-group"></i> Zones</h6>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showZones" checked>
-                    <label class="form-check-label" for="showZones">
-                        Show Geofence Zones
-                    </label>
+        </div>
+    </div>
+
+    <!-- Console Log for Alerts -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="console-container">
+                    <div class="console-header">
+                        <h5>
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Live Alerts
+                            <span class="realtime-indicator"></span>
+                        </h5>
+                        <div class="console-controls">
+                            <button onclick="toggleAutoScroll()" id="autoScrollBtn" title="Toggle auto-scroll">
+                                <i class="fas fa-arrow-down"></i>
+                            </button>
+                            <button onclick="clearConsole()" title="Clear console">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            <button onclick="exportLogs()" title="Export logs">
+                                <i class="fas fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="console-body" id="consoleBody">
+                        <div class="console-empty" id="emptyMessage">
+                            <i class="fas fa-info-circle"></i> Waiting for alerts...
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <button class="btn btn-sm btn-outline-primary w-100" onclick="centerMap()">
-                <i class="fas fa-crosshairs"></i> Center Map
-            </button>
         </div>
     </div>
 </div>
@@ -188,9 +415,10 @@
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<!-- Firebase Realtime Database SDK -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
     // Firebase Configuration
@@ -200,8 +428,9 @@
     if (!firebase.apps.length) {
         firebase.initializeApp(firebaseConfig);
     }
-    
+
     const database = firebase.database();
+    const firestore = firebase.firestore();
     
     // Initialize map centered on Philippines (Bulacan)
     const map = L.map('liveMap').setView([14.8433, 120.8111], 13);
@@ -234,7 +463,7 @@
     let stats = {
         total: 0,
         available: 0,
-        inUse: 0,
+        inRent: 0,
         offline: 0
     };
     
@@ -315,7 +544,7 @@
         stats = {
             total: 0,
             available: 0,
-            inUse: 0,
+            inRent: 0,
             offline: 0
         };
         
@@ -518,6 +747,231 @@
     // Cleanup listeners on page unload
     window.addEventListener('beforeunload', () => {
         database.ref('bikes').off();
+    });
+
+    // ============================================
+    // Console Log for Alerts - Firestore Integration
+    // ============================================
+
+    let alertsData = [];
+    let autoScroll = true;
+    let alertCount = 0;
+
+    // Format timestamp to readable format
+    function formatTimestamp(timestamp) {
+        if (!timestamp) return '--:--:--';
+
+        let date;
+        if (timestamp.toDate) {
+            // Firestore Timestamp
+            date = timestamp.toDate();
+        } else if (timestamp instanceof Date) {
+            date = timestamp;
+        } else {
+            date = new Date(timestamp);
+        }
+
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    // Format location to readable format
+    function formatLocation(location) {
+        if (!location) return 'Unknown location';
+
+        if (location._lat !== undefined && location._long !== undefined) {
+            // Firestore GeoPoint format
+            return `${location._lat.toFixed(6)}° N, ${location._long.toFixed(6)}° E`;
+        } else if (Array.isArray(location) && location.length >= 2) {
+            // Array format [lat, lng]
+            return `${location[0].toFixed(6)}° N, ${location[1].toFixed(6)}° E`;
+        } else if (location.latitude !== undefined && location.longitude !== undefined) {
+            // Object format
+            return `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E`;
+        }
+
+        return 'Unknown location';
+    }
+
+    // Get alert type class for styling
+    function getAlertTypeClass(type) {
+        const typeMap = {
+            'geofence_cross': 'geofence_cross',
+            'geofence_exit': 'geofence_cross',
+            'geofence_enter': 'geofence_cross',
+            'low_battery': 'low_battery',
+            'maintenance': 'maintenance',
+            'theft': 'theft',
+            'speed_limit': 'speed_limit',
+            'speed_violation': 'speed_limit',
+        };
+
+        return typeMap[type] || 'default';
+    }
+
+    // Add alert to console
+    function addAlertToConsole(alert) {
+        const consoleBody = document.getElementById('consoleBody');
+        const emptyMessage = document.getElementById('emptyMessage');
+
+        // Hide empty message
+        if (emptyMessage) {
+            emptyMessage.style.display = 'none';
+        }
+
+        // Create log entry
+        const logEntry = document.createElement('div');
+        logEntry.className = `console-log-entry ${getAlertTypeClass(alert.type)}`;
+
+        const timestamp = formatTimestamp(alert.timestamp);
+        const location = formatLocation(alert.location);
+
+        logEntry.innerHTML = `
+            <span class="log-timestamp">[${timestamp}]</span>
+            <span class="log-type">${alert.type || 'ALERT'}</span>
+            <span class="log-bike-id">${alert.bikeId || 'N/A'}</span>
+            <span class="log-message">${alert.message || 'Alert triggered'}</span>
+            ${location !== 'Unknown location' ? `<span class="log-location"><i class="fas fa-map-marker-alt"></i> ${location}</span>` : ''}
+        `;
+
+        // Add to beginning of console (newest first)
+        if (consoleBody.firstChild) {
+            consoleBody.insertBefore(logEntry, consoleBody.firstChild);
+        } else {
+            consoleBody.appendChild(logEntry);
+        }
+
+        // Update alert count
+        alertCount++;
+        document.getElementById('alertCounter').textContent = alertCount;
+
+        // Auto-scroll to top (where new alerts appear)
+        if (autoScroll) {
+            consoleBody.scrollTop = 0;
+        }
+
+        // Store alert data
+        alertsData.unshift(alert);
+
+        // Limit console entries to 100 for performance
+        const entries = consoleBody.querySelectorAll('.console-log-entry');
+        if (entries.length > 100) {
+            entries[entries.length - 1].remove();
+            alertsData.pop();
+        }
+    }
+
+    // Setup Firestore listener for alerts
+    function setupAlertsListener() {
+        console.log('🔔 Setting up Firestore alerts listener...');
+
+        try {
+            const alertsRef = firestore.collection('alerts');
+
+            // Get current timestamp - only listen for alerts from now onwards
+            const now = firebase.firestore.Timestamp.now();
+            console.log('📅 Listening for alerts from:', now.toDate().toLocaleString());
+
+            // Listen for new alerts created from current time onwards
+            alertsRef
+                .where('timestamp', '>=', now)
+                .orderBy('timestamp', 'desc')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            const alertData = change.doc.data();
+                            const alert = {
+                                id: change.doc.id,
+                                bikeId: alertData.bikeId || alertData.bike_id || 'Unknown',
+                                location: alertData.location,
+                                type: alertData.type || 'alert',
+                                message: alertData.message || 'Alert triggered',
+                                timestamp: alertData.timestamp,
+                                rentalId: alertData.rentalId || alertData.rental_id,
+                                customerId: alertData.customerId || alertData.customer_id,
+                                zoneId: alertData.zoneId || alertData.zone_id,
+                            };
+
+                            // Only add if not already in the list (avoid duplicates)
+                            if (!alertsData.find(a => a.id === alert.id)) {
+                                addAlertToConsole(alert);
+                                console.log('🔔 New alert received:', alert.bikeId, '-', alert.type);
+                            }
+                        }
+                    });
+                }, (error) => {
+                    console.error('❌ Error listening to alerts:', error);
+                });
+
+            console.log('✅ Alerts listener setup complete - monitoring for new alerts only');
+        } catch (error) {
+            console.error('❌ Failed to setup alerts listener:', error);
+        }
+    }
+
+    // Toggle auto-scroll
+    function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        const btn = document.getElementById('autoScrollBtn');
+        if (autoScroll) {
+            btn.style.background = '#4e4e4e';
+        } else {
+            btn.style.background = '#3e3e3e';
+        }
+    }
+
+    // Clear console
+    function clearConsole() {
+        const consoleBody = document.getElementById('consoleBody');
+        const emptyMessage = document.getElementById('emptyMessage');
+
+        consoleBody.innerHTML = '';
+        consoleBody.appendChild(emptyMessage);
+        emptyMessage.style.display = 'block';
+
+        alertsData = [];
+        alertCount = 0;
+        document.getElementById('alertCounter').textContent = '0';
+
+        console.log('🧹 Console cleared');
+    }
+
+    // Export logs as JSON
+    function exportLogs() {
+        if (alertsData.length === 0) {
+            alert('No alerts to export');
+            return;
+        }
+
+        const dataStr = JSON.stringify(alertsData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `alerts-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        console.log('📥 Exported', alertsData.length, 'alerts');
+    }
+
+    // Initialize alerts listener when page loads
+    window.addEventListener('load', () => {
+        setupAlertsListener();
+    });
+
+    // Cleanup alerts listener on page unload
+    window.addEventListener('beforeunload', () => {
+        if (firestore) {
+            // Firestore listeners are automatically cleaned up
+            console.log('🧹 Cleaning up Firestore listeners');
+        }
     });
 </script>
 {% endblock %}
