@@ -111,7 +111,7 @@ class RideFirebaseService:
             logger.error(f"Error fetching ride log {ride_id} from Firebase: {e}", exc_info=True)
             return None
 
-    def list_rides(self, limit: int = 1000, start_after_doc=None, order_by: str = 'startTime', direction: str = 'DESCENDING') -> List[Dict]:
+    def list_rides(self, limit: int = 1000, start_after_doc=None, order_by: str = 'startTime', direction: str = 'DESCENDING', start_after_timestamp: Optional[datetime] = None) -> List[Dict]:
         """
         List ride logs from Firebase, ordered by a specified field.
 
@@ -126,6 +126,11 @@ class RideFirebaseService:
         """
         try:
             query = self.collection
+            
+            if start_after_timestamp:
+                logger.info(f"Querying for rides starting after: {start_after_timestamp}")
+                # Firestore query: field > timestamp
+                query = query.where(order_by, '>', start_after_timestamp)
 
             # Apply ordering
             order_direction = firestore.Query.DESCENDING if direction.upper() == 'DESCENDING' else firestore.Query.ASCENDING

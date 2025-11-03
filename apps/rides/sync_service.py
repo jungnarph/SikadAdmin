@@ -8,6 +8,10 @@ from datetime import datetime
 from django.utils.timezone import make_aware, is_aware
 from django.apps import apps
 from dateutil import parser as dateutil_parser
+from django.db import transaction
+from apps.customers.models import Customer
+from apps.bikes.models import Bike
+from typing import Optional
 
 # Import necessary Firebase services
 from .firebase_service import RideFirebaseService
@@ -410,38 +414,109 @@ class RideSyncService:
             logger.error(f"Error syncing ride {ride_id}: {e}", exc_info=True)
             return False, False
 
-    def sync_all_rides(self, limit: int = 1000) -> dict:
+    def sync_all_rides(
+        self,
+        limit: int = 1000,
+        start_after_timestamp: Optional[datetime] = None,
+        order_by: str = 'startTime',
+        direction: str = 'ASCENDING' # Sync oldest-to-newest for failsafe
+    ) -> dict:
         """
-        Sync multiple rides from Firebase to PostgreSQL.
+        Syncs a batch of rides from Firebase to PostgreSQL
+        using efficient bulk operations, starting after a given timestamp.
         """
-        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0}
+        stats = {'total': 0, 'created': 0, 'updated': 0, 'failed': 0, 'processed': 0}
         try:
-            logger.info(f"Starting bulk ride sync with limit {limit}")
-            rides_data = self.firebase_service.list_rides(limit=limit)
-
+            logger.info(f"Starting ride batch sync. Limit: {limit}, After: {start_after_timestamp}")
+            
+            # 1. Fetch a batch of ride data from Firebase
+            # We sort by ASCENDING (oldest first) to sync in chronological order
+            rides_data = self.firebase_service.list_rides(
+                limit=limit,
+                start_after_timestamp=start_after_timestamp,
+                order_by=order_by,
+                direction=direction
+            )
             stats['total'] = len(rides_data)
-            logger.info(f"Fetched {stats['total']} rides from Firebase. Beginning sync...")
+            
+            if not rides_data:
+                logger.info("No new rides found in Firebase to sync for this batch.")
+                return stats
 
+            logger.info(f"Fetched {stats['total']} rides from Firebase. Mapping data...")
+
+            # 2. Pre-cache existing data from your Postgres DB to avoid N+1 lookups
+            all_ride_ids = {r['firebase_id'] for r in rides_data if 'firebase_id' in r}
+            all_customer_ids = {r.get('userId') for r in rides_data if r.get('userId')}
+            all_bike_ids = {r.get('bikeId') for r in rides_data if r.get('bikeId')}
+
+            # Create lookup maps (dictionaries)
+            existing_rides_map = {
+                str(ride.firebase_id): ride 
+                for ride in Ride.objects.filter(firebase_id__in=all_ride_ids)
+            }
+            customers_map = {
+                str(c.firebase_id): c 
+                for c in Customer.objects.filter(firebase_id__in=all_customer_ids)
+            }
+            bikes_map = {
+                str(b.firebase_id): b 
+                for b in Bike.objects.filter(firebase_id__in=all_bike_ids)
+            }
+            
+            logger.info(f"Pre-cached {len(existing_rides_map)} existing rides, {len(customers_map)} customers, and {len(bikes_map)} from DB.")
+
+            rides_to_create = []
+            rides_to_update = []
+            
+            # 3. Process data in memory
             for ride_data in rides_data:
                 ride_id = ride_data.get('firebase_id')
-                if ride_id:
-                    success, created = self.sync_single_ride(ride_id, ride_data)
-                    if success:
-                        if created:
-                            stats['created'] += 1
-                        else:
-                            stats['updated'] += 1
+                if not ride_id:
+                    stats['failed'] += 1
+                    continue
+                
+                try:
+                    # This still makes 1 call per ride to get_payment()
+                    # This is the next bottleneck to fix, but it's much better than before.
+                    mapped_data = self._map_firebase_to_django(ride_data)
+                    
+                    # Manually link customers and bikes from our cache
+                    mapped_data['customer'] = customers_map.get(ride_data.get('userId'))
+                    mapped_data['bike'] = bikes_map.get(ride_data.get('bikeId'))
+
+                    if ride_id in existing_rides_map:
+                        ride_obj = existing_rides_map[ride_id]
+                        for key, value in mapped_data.items():
+                            setattr(ride_obj, key, value)
+                        rides_to_update.append(ride_obj)
                     else:
-                        stats['failed'] += 1
-                else:
-                    logger.warning("Found ride data without firebase_id during bulk sync.")
+                        mapped_data['firebase_id'] = ride_id
+                        rides_to_create.append(Ride(**mapped_data))
+                        
+                except Exception as e:
+                    logger.error(f"Error mapping ride {ride_id}: {e}", exc_info=True)
                     stats['failed'] += 1
 
-            logger.info(f"Ride sync completed: Processed {stats['processed']}, Failed {stats['failed']} out of {stats['total']} fetched.")
+            # 4. Perform bulk database operations in a single transaction
+            logger.info(f"Performing bulk operations. Creating: {len(rides_to_create)}, Updating: {len(rides_to_update)}")
+            with transaction.atomic():
+                if rides_to_create:
+                    Ride.objects.bulk_create(rides_to_create, batch_size=500, ignore_conflicts=True) # ignore_conflicts is a failsafe
+                    stats['created'] = len(rides_to_create)
+                
+                if rides_to_update:
+                    model_fields = [f.name for f in Ride._meta.fields if f.name not in ['id', 'firebase_id']]
+                    Ride.objects.bulk_update(rides_to_update, model_fields, batch_size=500)
+                    stats['updated'] = len(rides_to_update)
+
+            logger.info("Bulk database operations complete.")
+            stats['processed'] = stats['created'] + stats['updated']
             return stats
 
         except Exception as e:
             logger.error(f"Error during bulk ride sync: {e}", exc_info=True)
+            stats['error'] = str(e)
             return stats
 
     def sync_rides_for_customer(self, customer_firebase_id: str, limit: int = 100) -> dict:

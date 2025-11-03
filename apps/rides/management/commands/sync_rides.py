@@ -6,6 +6,8 @@ Usage: python manage.py sync_rides [--ride-id <firebase_doc_id>] [--limit <num>]
 from django.core.management.base import BaseCommand, CommandError
 from apps.rides.sync_service import RideSyncService
 from apps.rides.firebase_service import RideFirebaseService # Import Firebase service to fetch data
+from apps.rides.models import Ride
+from django.db.models import Max
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,72 +30,78 @@ class Command(BaseCommand):
         # Add other arguments if needed, e.g., --start-date, --end-date
 
     def handle(self, *args, **options):
-        # Instantiate services
+        # This is the "Full Sync" command.
+        # It runs in a loop until all rides are synced.
+        
         sync_service = RideSyncService()
-        # Instantiate Firebase service here to fetch data if needed for sync_all
-        firebase_service = RideFirebaseService()
-        sync_service.firebase_service = firebase_service # Inject firebase service if needed by sync_service
-
-        ride_id = options.get('ride_id')
-        limit = options.get('limit')
-
-        start_message = "Starting ride sync process..."
+        ride_id_arg = options.get('ride_id')
+        
+        BATCH_SIZE = 1000 # Use the large limit from the --limit arg
+        
+        start_message = "Starting FULL incremental ride sync..."
         self.stdout.write(self.style.NOTICE(start_message))
         logger.info(start_message)
 
         try:
-            if ride_id:
+            if ride_id_arg:
                 # Sync a single ride
-                self.stdout.write(f"Attempting to sync specific ride: {ride_id}")
-                # Fetch the specific ride data first
-                ride_data = firebase_service.get_ride(ride_id)
-                if ride_data:
-                    success = sync_service.sync_single_ride(ride_id, ride_data)
-                    if success:
-                        self.stdout.write(self.style.SUCCESS(f'✓ Successfully synced ride {ride_id}'))
-                        logger.info(f'Successfully synced ride {ride_id}')
-                    else:
-                        self.stdout.write(self.style.ERROR(f'✗ Failed to sync ride {ride_id}. Check logs.'))
-                        logger.error(f'Failed to sync ride {ride_id}.')
+                self.stdout.write(f"Attempting to sync specific ride: {ride_id_arg}")
+                success, created = sync_service.sync_single_ride(ride_id_arg) # Assumes sync_single_ride exists
+                if success:
+                    self.stdout.write(self.style.SUCCESS(f'✓ Successfully synced ride {ride_id_arg}'))
                 else:
-                     self.stdout.write(self.style.ERROR(f'✗ Ride {ride_id} not found in Firebase.'))
-                     logger.error(f'Ride {ride_id} not found in Firebase.')
+                    self.stdout.write(self.style.ERROR(f'✗ Failed to sync ride {ride_id_arg}. Check logs.'))
+                
+                return # Stop after syncing the single ride
 
-            else:
-                # Sync multiple rides (up to the limit)
-                self.stdout.write(f"Attempting to sync multiple rides (limit: {limit})...")
-                # Fetch rides data using Firebase service
-                rides_data = firebase_service.list_rides(limit=limit)
-                stats = {'total': len(rides_data), 'processed': 0, 'failed': 0}
+            # --- This is the new looping logic for a full sync ---
+            total_created = 0
+            total_updated = 0
+            total_failed = 0
 
-                if not rides_data:
-                    self.stdout.write(self.style.WARNING('No rides found in Firebase to sync.'))
+            while True:
+                # 1. Find the last sync point from our database
+                latest_ride = Ride.objects.order_by('-start_time').first()
+                start_after = latest_ride.start_time if latest_ride else None
+                
+                if start_after:
+                    self.stdout.write(f"Querying for {BATCH_SIZE} rides after {start_after}...")
                 else:
-                    self.stdout.write(f"Fetched {stats['total']} rides from Firebase. Beginning sync...")
-                    for ride_data in rides_data:
-                        current_ride_id = ride_data.get('firebase_id')
-                        if current_ride_id:
-                            if sync_service.sync_single_ride(current_ride_id, ride_data):
-                                stats['processed'] += 1
-                            else:
-                                stats['failed'] += 1
-                        else:
-                            logger.warning("Found ride data without firebase_id during bulk sync.")
-                            stats['failed'] += 1
+                    self.stdout.write(f"Querying for first {BATCH_SIZE} rides from beginning...")
 
+                # 2. Fetch the next batch
+                stats = sync_service.sync_all_rides(
+                    limit=BATCH_SIZE,
+                    start_after_timestamp=start_after,
+                    order_by='startTime',
+                    direction='ASCENDING' # Sync oldest-to-newest
+                )
+                
+                created = stats.get("created", 0)
+                updated = stats.get("updated", 0)
+                failed = stats.get("failed", 0)
+                
+                total_created += created
+                total_updated += updated
+                total_failed += failed
+
+                if created > 0 or updated > 0 or failed > 0:
                     self.stdout.write(
-                        f"Bulk Sync Result: Fetched {stats['total']}, "
-                        f"Processed {stats['processed']}, Failed {stats['failed']}."
+                        f"✓ Batch complete: {created} created, {updated} updated, {failed} failed."
                     )
-                    if stats['failed'] > 0:
-                        self.stdout.write(self.style.WARNING(f"Encountered {stats['failed']} failures. Check logs."))
-                    self.stdout.write(self.style.SUCCESS('✓ Bulk ride sync finished.'))
-                    logger.info(f"Bulk ride sync finished: {stats}")
+                
+                # 3. Check if we are done
+                # If the number of rides we got back is less than our limit,
+                # it means we've processed the last page.
+                if stats.get('total', 0) < BATCH_SIZE:
+                    self.stdout.write(self.style.SUCCESS("✓ All rides are now synced."))
+                    break
+            
+            final_message = f"Full sync complete. Total: {total_created} created, {total_updated} updated, {total_failed} failed."
+            self.stdout.write(self.style.SUCCESS(final_message))
+            logger.info(final_message)
+
 
         except Exception as e:
             logger.error(f"An unexpected error occurred during ride sync: {e}", exc_info=True)
             raise CommandError(f"Ride sync failed: {e}")
-
-        final_message = "Ride sync process complete."
-        self.stdout.write(self.style.SUCCESS(final_message))
-        logger.info(final_message)
