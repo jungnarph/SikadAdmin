@@ -78,7 +78,7 @@ def sync_all_payments(request):
     """
     
     # Define a safe batch size that won't time out
-    QUICK_SYNC_BATCH_SIZE = 100 
+    QUICK_SYNC_BATCH_SIZE = 30 
     
     try:
         # 1. Find the payment_date of the most recent payment we have.
