@@ -187,3 +187,6 @@ serviceAccountKeys/
 .serviceAccountKeys/
 
 staticfiles/
+
+.test_bike_simulator.py
+test_bike_simulator.py
