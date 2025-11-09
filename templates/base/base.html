@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -135,7 +136,7 @@
             background: white;
             padding: 0 30px;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.08);
             z-index: 999;
@@ -725,5 +726,145 @@
     </script>
     
     {% block extra_js %}{% endblock %}
+
+    <script>
+        // --- Global Firebase variables ---
+        let globalFirestore;
+        let globalDatabase; // Added for bike_map
+        let globalUrgentAlertModal;
+        
+        // --- Create the Audio object for the "ring" ---
+        let globalUrgentSound = new Audio("{% static 'sounds/urgent_alert.mp3' %}");
+        globalUrgentSound.loop = true; // Make it ring continuously
+
+        // --- (Add formatGlobalTimestamp and formatGlobalLocation functions here) ---
+        function formatGlobalTimestamp(timestamp) {
+            if (!timestamp) return '--:--:--';
+            let date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleTimeString();
+        }
+        function formatGlobalLocation(location) {
+            if (!location) return 'Unknown location';
+            if (location._lat !== undefined && location._long !== undefined) {
+                return `${location._lat.toFixed(6)}° N, ${location._long.toFixed(6)}° E`;
+            } else if (location.latitude !== undefined && location.longitude !== undefined) {
+                return `${location.latitude.toFixed(6)}° N, ${location.longitude.toFixed(6)}° E`;
+            }
+            return 'Unknown location';
+        }
+        
+        // --- Global Alert Trigger ---
+        function triggerGlobalUrgentAlert(alert) {
+            if (!globalUrgentAlertModal) return;
+            document.getElementById('globalUrgentAlertTitle').innerText = `URGENT: ${alert.type || 'Alert'}`;
+            document.getElementById('globalUrgentAlertBikeId').innerText = alert.bikeId || 'N/A';
+            document.getElementById('globalUrgentAlertMessage').innerText = alert.message;
+            document.getElementById('globalUrgentAlertLocation').innerText = formatGlobalLocation(alert.location);
+            
+            globalUrgentSound.play().catch(e => {
+                console.error("Audio play failed:", e);
+                alert(`URGENT ALERT: ${alert.message}`);
+            });
+            globalUrgentAlertModal.show();
+        }
+
+        // --- Global Alert Listener Setup ---
+        function setupGlobalAlertsListener() {
+            if (!globalFirestore) {
+                console.warn("Firestore not initialized for this page. Global alert listener disabled.");
+                return;
+            }
+            console.log('🔔 Setting up GLOBAL Firestore alerts listener...');
+            const alertsRef = globalFirestore.collection('alerts');
+            const now = firebase.firestore.Timestamp.now();
+
+            alertsRef
+                .where('timestamp', '>=', now)
+                .orderBy('timestamp', 'desc')
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            const alertData = change.doc.data();
+                            const alert = {
+                                id: change.doc.id,
+                                bikeId: alertData.bikeId || alertData.bike_id || 'Unknown',
+                                location: alertData.location,
+                                type: alertData.type || 'alert',
+                                message: alertData.message || 'Alert triggered',
+                                timestamp: alertData.timestamp,
+                            };
+                            
+                            console.log('🔔 Global Alert Received:', alert.bikeId, '-', alert.type);
+
+                            if (alert.message && alert.message.toUpperCase().includes('URGENT')) {
+                                console.warn('🚨 GLOBAL URGENT alert detected!');
+                                triggerGlobalUrgentAlert(alert);
+                            }
+                        }
+                    });
+                }, (error) => {
+                    console.error('❌ Error listening to global alerts:', error);
+                });
+        }
+
+        // --- Initialize Modal and Listener on *every* page load ---
+        document.addEventListener('DOMContentLoaded', function() {
+            // Init the Modal
+            const modalEl = document.getElementById('globalUrgentAlertModal');
+            if (modalEl) {
+                globalUrgentAlertModal = new bootstrap.Modal(modalEl);
+                modalEl.addEventListener('hidden.bs.modal', () => {
+                    globalUrgentSound.pause();
+                    globalUrgentSound.currentTime = 0;
+                });
+            }
+
+            // Check if a page-specific script has defined the firebaseConfig
+            if (typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey) {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                    console.log("Global Firebase App Initialized.");
+                } else {
+                    console.log("Global Firebase App already initialized.");
+                }
+                // Define the global firestore AND database variables
+                globalFirestore = firebase.firestore();
+                globalDatabase = firebase.database(); // <-- This is needed for the map
+
+                // Start the listener
+                setupGlobalAlertsListener();
+            } else {
+                console.log("firebaseConfig not found on this page. Global alerts/map are OFF.");
+            }
+        });
+    </script>
+    
+    <div class="modal fade" id="globalUrgentAlertModal" tabindex="-1" aria-labelledby="globalUrgentAlertModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger border-4">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="globalUrgentAlertModalLabel">
+                        <i class="fas fa-exclamation-triangle fa-beat"></i>
+                        <span id="globalUrgentAlertTitle">URGENT ALERT</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <i class="fas fa-motorcycle fa-3x text-danger mb-3"></i>
+                    <h4 id="globalUrgentAlertBikeId" class="mb-3">BIKE-ID-HERE</h4>
+                    <p class="lead" id="globalUrgentAlertMessage">Message here</p>
+                    <div class="mt-3 bg-light p-2 rounded">
+                        <small class="text-muted">Location:</small>
+                        <div id="globalUrgentAlertLocation">Lat/Lng here</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-check"></i> Acknowledge
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

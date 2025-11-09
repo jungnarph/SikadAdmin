@@ -12,6 +12,8 @@ from django.db.models import Count, Sum # Add Sum import
 from django.db.models.functions import TruncDay
 from django.db.models import Q
 
+from django.conf import settings
+
 from apps.bikes.models import Bike
 from apps.geofencing.models import Zone
 from apps.rides.models import Ride
@@ -130,6 +132,12 @@ def dashboard(request):
     least_used_bikes_queryset = bike_usage_stats.order_by('ride_count') # Order ascending for least used
     least_used_bikes = list(least_used_bikes_queryset[:5]) # Bottom 5
 
+    firebase_config = {
+        'databaseURL': getattr(settings, 'FIREBASE_DATABASE_URL', 'https://cit306-finalproject-default-rtdb.firebaseio.com/'),
+        'apiKey': getattr(settings, 'FIREBASE_API_KEY', ''),
+        'authDomain': getattr(settings, 'FIREBASE_AUTH_DOMAIN', ''),
+        'projectId': getattr(settings, 'FIREBASE_PROJECT_ID', ''),
+    }
 
     # --- Context Dictionary ---
     context = {
@@ -160,6 +168,7 @@ def dashboard(request):
         'most_used_bikes': most_used_bikes,
         'least_used_bikes': least_used_bikes,
         'bike_usage_period_days': 30,
+        'firebase_config': json.dumps(firebase_config),
     }
 
     return render(request, 'dashboard/dashboard.html', context)
